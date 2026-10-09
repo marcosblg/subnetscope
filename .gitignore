@@ -1,0 +1,15 @@
+# datos propios: nunca deben subirse
+*.json
+!package.json
+subnetscope-*.json
+ips-*.csv
+plan-ip-*.png
+
+# temporales
+_*.py
+_check.js
+_backup.html
+Thumbs.db
+desktop.ini
+.DS_Store
+PUBLICAR.md
