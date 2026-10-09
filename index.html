@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SubnetScope — planificador de IPs y VLANs</title>
+<style>
+:root{
+  --bg:#0e131c; --bg2:#131a26; --panel:#1a2233; --panel2:#212b40; --panel3:#28344d;
+  --line:#33415c; --line2:#435373;
+  --tx:#eaf0fb; --tx2:#b3c1da; --tx3:#8797b5;
+  --acc:#59a9ff; --accbg:#16375c; --accbd:#3d7ab8;
+  --ok:#2fd07a; --warn:#ffb020; --bad:#ff5c6c; --gold:#ffd166;
+  --port:#2b3752; --portb:#4a5b7e; --portx:#c2cfe6;
+  --sh:0 18px 50px -22px #000;
+  --f:"Segoe UI",Inter,system-ui,-apple-system,sans-serif;
+  --m:"Cascadia Mono",Consolas,ui-monospace,monospace;
+  --cs:26px; --side:262px;
+}
+html[data-theme="light"]{
+  --bg:#eaeef5; --bg2:#e2e8f1; --panel:#ffffff; --panel2:#f1f4fa; --panel3:#e5eaf3;
+  --line:#c3cede; --line2:#a9b8ce;
+  --tx:#111827; --tx2:#4a5772; --tx3:#6b7a94;
+  --acc:#1f6fd0; --accbg:#dceaff; --accbd:#7fb1ec;
+  --ok:#12a355; --warn:#b26a00; --bad:#c62b3c; --gold:#a06a00;
+  --port:#e7ecf5; --portb:#9fb0cb; --portx:#2c3a55;
+  --sh:0 10px 30px -16px #7b88a0;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--f);overflow:hidden}
+button,input,select,textarea{font-family:inherit;color:inherit}
+button{cursor:pointer}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px;border:3px solid var(--bg2)}
+::-webkit-scrollbar-thumb:hover{background:var(--acc)}
+
+/* ---------- barra superior ---------- */
+#top{min-height:54px;display:flex;align-items:center;gap:9px;padding:7px 14px;background:var(--panel);border-bottom:2px solid var(--line);position:absolute;top:0;left:0;right:0;z-index:60;flex-wrap:wrap}
+#top .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px;flex:0 0 auto}
+#top .brand i{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px var(--acc);display:block}
+#top .brand small{display:block;font-weight:500;font-size:11px;color:var(--tx3);letter-spacing:0}
+.sep{width:1px;height:28px;background:var(--line);flex:0 0 auto}
+.spacer{flex:1}
+.btn{flex:0 0 auto;white-space:nowrap;background:var(--panel2);border:1px solid var(--line2);color:var(--tx);padding:8px 12px;border-radius:8px;font-size:13px;font-weight:550;display:inline-flex;align-items:center;gap:6px;transition:.13s}
+.btn:hover{background:var(--panel3);border-color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.acc{background:var(--accbg);border-color:var(--accbd);color:var(--acc)}
+.btn.acc:hover{filter:brightness(1.15)}
+.btn.danger:hover{background:#4a1a24;border-color:var(--bad);color:#ffd7dc}
+html[data-theme="light"] .btn.danger:hover{background:#ffe4e8;color:#8d1524}
+.btn.sm{padding:5px 8px;font-size:11.5px}
+.swrap{position:relative;flex:0 1 240px;min-width:120px;display:flex}
+#search{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px 11px;font-size:13px;outline:none}
+#search::placeholder{color:var(--tx3)}
+#search:focus{border-color:var(--acc);box-shadow:0 0 0 3px #59a9ff33}
+#sres{position:fixed;z-index:90;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--sh);padding:5px;width:330px;max-height:360px;overflow:auto;display:none}
+#sres.on{display:block}
+#sres button{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 9px;border-radius:7px;font-size:12px;color:var(--tx)}
+#sres button:hover,#sres button.cur{background:var(--panel3)}
+#sres button b{font-family:var(--m);color:var(--acc);margin-right:6px}
+#sres button small{display:block;color:var(--tx3);font-size:10.5px;margin-top:1px}
+#sres .none{padding:10px;font-size:12px;color:var(--tx3)}
+.roomwrap{display:flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:3px 5px;flex:0 0 auto}
+.roomwrap .lb{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--tx3);font-weight:700}
+.roomwrap select{background:var(--bg2);border:1px solid var(--line2);border-radius:6px;color:var(--tx);font-size:12.5px;font-weight:600;padding:5px 7px;max-width:190px;outline:none}
+.roomwrap select:focus{border-color:var(--acc)}
+.pill{flex:0 0 auto;font-size:11.5px;color:var(--tx2);background:var(--bg2);border:1px solid var(--line);padding:6px 10px;border-radius:20px;font-family:var(--m)}
+.zoomwrap{display:flex;align-items:center;gap:2px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:2px;flex:0 0 auto}
+.zoomwrap button{background:none;border:0;color:var(--tx2);padding:5px 9px;border-radius:6px;font-size:14px;line-height:1}
+.zoomwrap button:hover{background:var(--panel3);color:var(--tx)}
+.zoomwrap span{font-size:11px;color:var(--tx3);width:40px;text-align:center;font-family:var(--m)}
+.menuwrap{position:relative;flex:0 0 auto}
+.menu{position:fixed;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--sh);padding:5px;min-width:250px;display:none;z-index:70}
+.menu.on{display:block}
+.menu button{display:block;width:100%;background:none;border:0;color:var(--tx);padding:9px 10px;border-radius:7px;font-size:12.5px;text-align:left;font-weight:600}
+.menu button:hover{background:var(--panel3)}
+.menu button small{display:block;color:var(--tx3);font-size:10.5px;font-weight:400;margin-top:2px}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.menu .scope{display:flex;gap:4px;padding:4px}
+.menu .scope button{flex:1;text-align:center;font-size:11.5px;padding:6px 4px;border:1px solid var(--line2);border-radius:6px;color:var(--tx2)}
+.menu .scope button.on{background:var(--accbg);border-color:var(--accbd);color:var(--acc)}
+#sideBtn.on{background:var(--accbg);border-color:var(--accbd);color:var(--acc)}
+
+/* ---------- panel lateral ---------- */
+#side{position:absolute;left:0;top:54px;bottom:0;width:var(--side);background:var(--panel);border-right:2px solid var(--line);overflow:auto;z-index:40;padding:10px 10px 80px}
+body.noside #side{display:none}
+.sec{margin-bottom:16px;border-radius:10px;transition:box-shadow .2s}
+.sec.glow,#legend.glow{box-shadow:0 0 0 3px var(--acc)}
+.sh{display:flex;align-items:center;gap:6px;padding:4px 2px 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);font-weight:700}
+.sh span{flex:1}
+.vl,.si,.inv{display:flex;align-items:center;gap:7px;width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 8px;margin-bottom:5px;font-size:12px;text-align:left;color:var(--tx)}
+.vl:hover,.si:hover{border-color:var(--acc)}
+.vl i,.si i{width:11px;height:11px;border-radius:3px;flex:0 0 auto;display:block}
+.vl .id{font-family:var(--m);font-weight:700;font-size:11px;min-width:30px}
+.vl .n{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vl .k,.si .k{font-size:10.5px;color:var(--tx3);font-family:var(--m);white-space:nowrap}
+.vl .ed{background:none;border:0;color:var(--tx3);padding:0 2px;font-size:12px}
+.vl .ed:hover{color:var(--acc)}
+.si{flex-wrap:wrap;row-gap:5px}
+.si .cidr{font-family:var(--m);font-weight:700;font-size:11.5px;flex:1}
+.bar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--port);width:100%}
+.bar b{display:block;height:100%}
+.inv{flex-wrap:wrap;row-gap:3px}
+.inv .n{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.inv small{width:100%;color:var(--tx3);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv .x{background:none;border:0;color:var(--tx3);padding:0 2px}
+.inv .x:hover{color:var(--bad)}
+.sempty{font-size:11.5px;color:var(--tx3);line-height:1.5;padding:4px 2px}
+
+/* ---------- lienzo ---------- */
+#stage{position:absolute;top:54px;right:0;bottom:0;left:var(--side);overflow:auto;background:radial-gradient(1000px 600px at 20% -10%,var(--bg2),transparent 60%),var(--bg)}
+body.noside #stage{left:0}
+#inner{position:relative;padding:22px 30px 110px 24px;width:max-content;min-width:100%}
+#nets{display:flex;flex-direction:column;gap:20px;align-items:flex-start}
+
+.net{background:var(--bg2);border:2px solid var(--line);border-left:6px solid var(--line);border-radius:14px;box-shadow:var(--sh);min-width:560px;transition:box-shadow .2s}
+.net.flash{box-shadow:0 0 0 3px var(--acc),var(--sh)}
+.net-head{display:flex;align-items:center;gap:9px;padding:10px 13px;background:var(--panel);border-bottom:2px solid var(--line);border-radius:8px 11px 0 0;flex-wrap:wrap}
+.net.fold .net-head{border-bottom:0;border-radius:8px 11px 11px 8px}
+.net-head .fd{background:none;border:0;color:var(--tx3);font-size:13px;width:18px;padding:0}
+.net-head .fd:hover{color:var(--acc)}
+.vt{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:5px;background:color-mix(in srgb,var(--vc) 22%,transparent);color:var(--tx);border:1px solid var(--vc)}
+.net-head .cidr{font-family:var(--m);font-size:14px;letter-spacing:.4px;color:var(--gold)}
+.net-head .nm{font-size:12.5px;font-weight:600;color:var(--tx2)}
+.net-head .cnt{font-size:11px;color:var(--tx3);font-family:var(--m)}
+.net-head .free{font-size:11px;font-family:var(--m);color:var(--ok)}
+.net-head .free.full{color:var(--bad)}
+.net .tools{display:flex;gap:4px;opacity:0;transition:.15s}
+.net:hover .tools{opacity:1}
+.net-info{display:flex;flex-wrap:wrap;gap:6px;padding:9px 13px 0}
+.net.fold .net-info,.net.fold .net-body,.net.fold .net-warn{display:none}
+.chip{font-size:10.5px;font-family:var(--m);padding:3px 7px;border-radius:5px;background:var(--panel2);border:1px solid var(--line2);color:var(--tx2);display:inline-flex;align-items:center;gap:5px}
+.chip em{font-style:normal;color:var(--tx3);font-family:var(--f);text-transform:uppercase;font-size:9.5px;letter-spacing:.5px;font-weight:700}
+.chip i{width:8px;height:8px;border-radius:2px;display:block}
+.net-warn{margin:9px 13px 0;padding:7px 10px;border-radius:8px;background:#ff5c6c1f;border:1px solid #ff5c6c66;color:var(--bad);font-size:12px;font-weight:600}
+.net-body{padding:11px 13px 13px}
+.blk{margin-bottom:6px}
+.blk-h{display:flex;align-items:center;gap:9px;width:100%;background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:6px 10px;font-size:11.5px;color:var(--tx2);text-align:left}
+.blk-h:hover{border-color:var(--acc)}
+.blk-h .ar{width:12px;color:var(--tx3)}
+.blk-h b{font-family:var(--m);color:var(--tx);font-size:12px;min-width:150px}
+.blk-h .k{font-family:var(--m);font-size:10.5px;flex:1}
+.blk-h .bar{width:130px;flex:0 0 auto}
+.blk-h.hashit{border-color:var(--gold);box-shadow:0 0 0 2px #ffd16655}
+.blk .cells{margin:7px 0 10px}
+.cells{display:grid;gap:3px;align-items:center;justify-content:start}
+.rl{font-family:var(--m);font-size:9.5px;color:var(--tx3);text-align:right;padding-right:6px}
+.c{width:var(--cs);height:var(--cs);border-radius:4px;background:var(--port);border:1.5px solid var(--portb);font-size:9px;font-weight:700;font-family:var(--m);color:var(--portx);display:grid;place-items:center;position:relative;cursor:pointer;user-select:none;transition:transform .08s,box-shadow .12s,opacity .15s}
+.c:hover{transform:translateY(-2px) scale(1.18);z-index:3;border-color:var(--acc);box-shadow:0 4px 12px -2px #0008}
+.c.s-asig{background:#3b82f655;border-color:#3b82f6;color:var(--tx)}
+.c.s-resv{background:#f59e0b55;border-color:#f59e0b;color:var(--tx)}
+.c.s-dhcp{background:repeating-linear-gradient(45deg,#a855f740 0 4px,#a855f71a 4px 8px);border-color:#a855f7aa}
+.c.s-gw{background:#22c55e66;border-color:#22c55e;color:var(--tx)}
+.c.s-net,.c.s-bc{background:repeating-linear-gradient(-45deg,#64748b66 0 3px,transparent 3px 6px);border-color:#64748b;color:var(--tx3);cursor:default}
+.c.has::after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:var(--tx);border:1.5px solid var(--panel)}
+.c.sel{background:var(--acc)!important;border-color:#fff!important;color:#fff;box-shadow:0 0 0 4px #59a9ff66;z-index:5}
+.c.msel{outline:2.5px solid var(--acc);outline-offset:1px;box-shadow:0 0 0 4px #59a9ff44;z-index:4}
+.c.hit{border-color:var(--gold)!important;box-shadow:0 0 0 3px #ffd16699;z-index:4}
+body.searching .c:not(.hit){opacity:.35}
+.c.flash{animation:fl 1.4s ease-out}
+@keyframes fl{0%,40%{box-shadow:0 0 0 7px var(--gold);transform:scale(1.25);z-index:6}100%{box-shadow:0 0 0 0 transparent}}
+body.ms .c{cursor:crosshair}
+.addnet{background:none;border:1.5px dashed var(--line2);color:var(--tx3);border-radius:10px;padding:14px 22px;font-size:12.5px;font-weight:600}
+.addnet:hover{border-color:var(--acc);color:var(--acc)}
+.nonet{max-width:520px;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:20px 22px;font-size:13px;color:var(--tx2);line-height:1.6}
+
+#msbar{display:none;position:absolute;top:54px;left:0;right:0;min-height:38px;align-items:center;gap:8px;padding:5px 14px;font-size:11.5px;white-space:nowrap;flex-wrap:wrap;color:#0e131c;background:var(--warn);border-bottom:1px solid #8a5f00;z-index:55;font-weight:600}
+body.ms #msbar{display:flex}
+#msbar b{color:#000}
+#msbar .grp{display:flex;gap:5px;align-items:center;flex:0 0 auto}
+#msbar .help{flex:1 1 120px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#msbar .grp button{margin:0;background:#0e131c;color:#ffe0a3;border:1px solid #00000055;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600}
+#msbar .grp button:hover{background:#000;color:#fff}
+#msbar .cnt{font-family:var(--m);font-size:11px;background:#00000022;padding:3px 7px;border-radius:5px}
+#msBtn.on{background:var(--warn);border-color:var(--warn);color:#0e131c}
+
+/* ---------- aviso rapido ---------- */
+#tip{position:fixed;z-index:150;background:var(--panel);color:var(--tx);border:1.5px solid var(--acc);border-radius:8px;padding:7px 10px;font-size:11.5px;box-shadow:var(--sh);pointer-events:none;display:none;max-width:290px;line-height:1.45}
+#tip.on{display:block}
+#tip b{color:var(--acc);font-family:var(--m)}
+#tip .fr{color:var(--tx3)}
+
+/* ---------- popover ---------- */
+#pop{position:fixed;z-index:200;width:340px;background:var(--panel);border:2px solid var(--acc);border-radius:12px;box-shadow:var(--sh);display:none;overflow:hidden}
+#pop.on{display:block;animation:pin .12s ease-out}
+@keyframes pin{from{opacity:0;transform:translateY(-6px)}}
+#pop .ph{padding:10px 12px;background:var(--panel2);border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px}
+#pop .ph .t{font-size:14px;font-weight:700;font-family:var(--m)}
+#pop .ph .p{font-size:10.5px;padding:3px 8px;border-radius:5px;font-weight:700;border:1px solid}
+#pop .ph .x{margin-left:auto;background:none;border:0;color:var(--tx3);font-size:16px;line-height:1}
+#pop .ph .x:hover{color:var(--bad)}
+#pop .pb{padding:11px 12px;max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+#pop .pf{padding:9px 12px;border-top:1px solid var(--line2);background:var(--panel2);display:flex;gap:6px}
+.empty{font-size:12.5px;color:var(--tx2);text-align:center;padding:12px 6px;line-height:1.6}
+.ctx{font-size:11px;color:var(--tx3);font-family:var(--m)}
+.note{font-size:11.5px;color:var(--tx2);line-height:1.45;border-left:3px solid var(--warn);padding-left:8px}
+
+/* ---------- modal ---------- */
+#veil{position:fixed;inset:0;background:#05080ecc;backdrop-filter:blur(3px);display:none;z-index:300;align-items:center;justify-content:center}
+#veil.on{display:flex}
+.modal{width:470px;max-width:94vw;background:var(--panel);border:2px solid var(--line2);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+.modal h3{margin:0;padding:14px 16px;font-size:14px;background:var(--panel2);border-bottom:1px solid var(--line2);letter-spacing:.4px}
+.modal .body{padding:15px 16px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow:auto}
+.fld label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:5px;font-weight:700}
+.fld input,.fld select,.fld textarea{width:100%;background:var(--bg2);border:1.5px solid var(--line2);border-radius:8px;padding:9px 10px;font-size:13px;outline:none}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px #59a9ff33}
+.fld textarea{resize:vertical;min-height:58px;line-height:1.45}
+.fld input.mono{font-family:var(--m)}
+.fld input[type=color]{padding:3px;height:38px;width:60px}
+.sw{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.sw button{width:22px;height:22px;border-radius:5px;border:2px solid transparent;padding:0}
+.sw button:hover{border-color:var(--tx)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal .foot{padding:12px 16px;border-top:1px solid var(--line2);display:flex;gap:8px;justify-content:flex-end;background:var(--panel2);flex-wrap:wrap}
+.hint{font-size:11.5px;color:var(--tx3);line-height:1.5}
+.hint b{color:var(--tx2)}
+.bad{color:var(--bad)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--tx2);line-height:1.45}
+.chk input{margin-top:3px}
+
+#savest.ok{color:var(--ok);border-color:#2fd07a55}
+#savest.bad{color:var(--bad);border-color:#ff5c6c66;font-weight:700}
+#warn{display:none;position:absolute;left:0;right:0;z-index:58;background:var(--bad);color:#fff;font-size:12.5px;font-weight:600;padding:8px 14px;align-items:center;gap:10px}
+#warn.on{display:flex}
+#warn span{white-space:normal}
+#warn button{background:#00000033;border:1px solid #ffffff55;color:#fff;padding:4px 9px;border-radius:6px;font-size:11.5px;font-weight:700}
+#toast .act{margin-left:10px;background:var(--acc);border:0;color:#fff;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:700;pointer-events:auto}
+#cap{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:220;display:none;
+  align-items:center;gap:14px;max-width:min(1000px,92vw);padding:14px 22px;border-radius:14px;
+  background:linear-gradient(180deg,#0e131cf2,#0b0f17f2);border:2px solid var(--acc);
+  box-shadow:0 24px 70px -18px #000,0 0 0 1px #0006;font-size:18px;font-weight:650;color:#fff;line-height:1.35}
+#cap.on{display:flex}
+#cap b{color:#59a9ff}
+#cap button{background:#ffffff1a;border:1px solid #ffffff44;color:#fff;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:700;flex:0 0 auto}
+#tour.on{background:var(--acc);border-color:var(--acc);color:#fff}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1.5px solid var(--acc);padding:10px 16px;border-radius:10px;font-size:13px;z-index:400;opacity:0;pointer-events:none;transition:.2s;box-shadow:var(--sh);font-weight:600}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
+#legend{position:fixed;right:14px;bottom:14px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:11px;z-index:50;box-shadow:var(--sh)}
+#legend b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:7px;cursor:pointer}
+#legend .lgb div{display:flex;align-items:center;gap:8px;margin-bottom:4px;color:var(--tx2)}
+#legend .c{width:15px;height:15px;font-size:0;cursor:default}
+#legend .c:hover{transform:none;box-shadow:none}
+
+/* ---------- impresion / PDF ---------- */
+#print{display:none}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  body{overflow:visible;background:#fff;color:#000}
+  #top,#side,#stage,#legend,#pop,#veil,#toast,#msbar,#tip,#warn,#cap,#sres{display:none!important}
+  #print{display:block;font-family:var(--f);color:#000}
+  #print h1{font-size:18px;margin:0 0 2px}
+  #print .meta{font-size:11px;color:#555;margin-bottom:14px}
+  #print h2{font-size:13px;margin:18px 0 6px;border-bottom:2px solid #000;padding-bottom:3px;page-break-after:avoid}
+  #print .sub{page-break-before:always}
+  #print img{max-width:100%;margin:6px 0 10px;page-break-inside:avoid}
+  #print table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:8px}
+  #print th{background:#eee;text-align:left;border:1px solid #999;padding:4px 5px}
+  #print td{border:1px solid #bbb;padding:3px 5px;vertical-align:top}
+  #print tr{page-break-inside:avoid}
+  #print .sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="brand"><i></i><div>SubnetScope<small>plan de IPs y VLANs</small></div></div>
+  <div class="sep"></div>
+  <div class="roomwrap">
+    <span class="lb">Sede</span>
+    <select id="site" title="Cambiar de sede o red"></select>
+    <button class="btn sm" id="siteAdd" title="Nueva sede">＋</button>
+    <button class="btn sm" id="siteEdit" title="Renombrar, duplicar o eliminar la sede">⋯</button>
+  </div>
+  <button class="btn sm" id="sideBtn" title="Mostrar u ocultar el panel de VLANs y subredes">☰</button>
+  <div class="sep"></div>
+  <div class="swrap"><input id="search" placeholder="Buscar IP, equipo o MAC…" autocomplete="off"></div>
+  <span class="pill" id="stats">—</span>
+  <div class="spacer"></div>
+  <div class="zoomwrap"><button id="zo">−</button><span id="zl">100%</span><button id="zi">+</button><button id="zr" title="Tamaño normal">⤢</button></div>
+  <button class="btn" id="theme" title="Cambiar tema">🌙</button>
+  <div class="sep"></div>
+  <button class="btn" id="tour" title="Demostración automática">▶ Ver demo</button>
+  <button class="btn" id="msBtn" title="Marcar varias IPs para reservarlas o liberarlas de golpe">▦ Selección</button>
+  <div class="menuwrap">
+    <button class="btn acc" id="expBtn">⭳ Exportar ▾</button>
+    <div class="menu" id="expMenu">
+      <div class="scope" id="expScope">
+        <button data-scope="site">Solo esta sede</button>
+        <button data-scope="all">Todas las sedes</button>
+      </div>
+      <hr>
+      <button data-exp="png">🖼 Imagen PNG<small>Las cuadrículas de todas las subredes</small></button>
+      <button data-exp="pdf">📄 PDF / Imprimir<small>Plan por subred + tabla de VLANs (elige "Guardar como PDF")</small></button>
+      <button data-exp="csv">📊 Excel (CSV)<small>Todas las IPs asignadas y reservadas</small></button>
+      <hr>
+      <button data-exp="json">💾 Copia de seguridad (JSON)<small>Para volver a importarlo aquí</small></button>
+    </div>
+  </div>
+  <button class="btn" id="linkFile" title="Guardar automáticamente en un archivo tuyo">💾 Archivo</button>
+  <span class="pill" id="savest">—</span>
+  <button class="btn" id="impJson" title="Copia de seguridad de SubnetScope o JSON exportado de RackScope">Importar</button>
+  <button class="btn danger" id="reset">Reiniciar</button>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+</div>
+<div id="sres"></div>
+
+<div id="msbar">▦ <b>Selección múltiple</b>
+  <span class="grp"><span class="cnt" id="selcnt">0 sel.</span>
+  <button data-ms="resv">Reservar</button>
+  <button data-ms="free">Liberar</button>
+  <button data-ms="clr">Quitar selección</button>
+  <button id="msoff">Salir</button></span>
+  <span class="help">clic marca o desmarca · <b>arrastrar</b> marca un tramo · <b>Shift+clic</b> marca desde la última · fuera de este modo, <b>Ctrl/Shift+clic</b> también selecciona</span>
+</div>
+
+<aside id="side">
+  <div class="sec" id="secV"><div class="sh"><span>VLANs</span><button class="btn sm" id="vAdd">＋ VLAN</button></div><div id="vlist"></div></div>
+  <div class="sec" id="secS"><div class="sh"><span>Subredes</span><button class="btn sm" id="nAdd">＋ Subred</button></div><div id="slist"></div></div>
+  <div class="sec" id="secI"><div class="sh"><span>Equipos sin IP</span><button class="btn sm" id="rsImp" title="Traer la lista de equipos de un JSON exportado de RackScope">⇣ RackScope</button></div><div id="ilist"></div></div>
+</aside>
+
+<div id="stage"><div id="inner"><div id="nets"></div></div></div>
+
+<div id="pop">
+  <div class="ph"><span class="t" id="popT"></span><span class="p" id="popP"></span><button class="x" id="popX">✕</button></div>
+  <div class="pb" id="popB"></div>
+  <div class="pf" id="popF"><button class="btn acc sm" id="popAs">Asignar</button><button class="btn sm" id="popRs">Reservar</button><span style="flex:1"></span><button class="btn sm danger" id="popFr">Liberar</button></div>
+</div>
+<datalist id="invlist"></datalist>
+
+<div id="veil"><div class="modal" id="modal"></div></div>
+<div id="warn"></div>
+<div id="cap"><span id="capT"></span><button id="capX">✕ salir</button></div>
+<div id="tip"></div>
+<div id="toast"></div>
+<div id="print"></div>
+<div id="legend"></div>
+
+<script>
+"use strict";
+const KEY="subnetscope.v1";
+const ST={
+  libre:{n:"Libre",           c:"#8797b5"},
+  asig: {n:"Asignada",        c:"#3b82f6"},
+  resv: {n:"Reservada",       c:"#f59e0b"},
+  dhcp: {n:"Rango DHCP",      c:"#a855f7"},
+  gw:   {n:"Puerta de enlace",c:"#22c55e"},
+  net:  {n:"Red",             c:"#64748b"},
+  bc:   {n:"Broadcast",       c:"#64748b"}
+};
+const TYPES={servidor:"Servidor",switch:"Switch",impresora:"Impresora",pc:"PC",camara:"Cámara",ap:"Punto de acceso",vm:"Máquina virtual",otro:"Otro"};
+const VCOL=["#38bdf8","#f472b6","#fb923c","#a3e635","#a78bfa","#facc15","#2dd4bf","#f87171","#818cf8","#94a3b8"];
+
+let uid=0; const nid=p=>p+(++uid)+"_"+Math.random().toString(36).slice(2,6);
+
+/* ---------- IPv4 ---------- */
+function ip2n(s){
+  const m=/^\s*(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\s*$/.exec(String(s==null?"":s));
+  if(!m)return null;
+  const o=m.slice(1).map(Number);
+  if(o.some(x=>x>255))return null;
+  return o[0]*16777216+o[1]*65536+o[2]*256+o[3];
+}
+const n2ip=n=>[n>>>24,(n>>>16)&255,(n>>>8)&255,n&255].join(".");
+const maskOf=len=>n2ip(2**32-2**(32-len));
+function parseCIDR(t){
+  const m=/^\s*([\d.]+)\s*\/\s*(\d{1,2})\s*$/.exec(String(t||""));
+  if(!m)return {err:"Formato incorrecto: escribe la red y el prefijo, p. ej. 192.168.10.0/24"};
+  const ip=ip2n(m[1]),len=+m[2];
+  if(ip==null)return {err:m[1]+" no es una dirección IPv4 válida"};
+  if(len<16||len>30)return {err:"El prefijo tiene que estar entre /16 y /30"};
+  const size=2**(32-len),net=Math.floor(ip/size)*size;
+  if(net!==ip)return {err:`${m[1]} no es la dirección de red de un /${len}: la correcta es ${n2ip(net)}/${len}`,fix:n2ip(net)+"/"+len};
+  return {net,len,size,bc:net+size-1,cidr:n2ip(net)+"/"+len};
+}
+const PC={};
+const P=s=>PC[s.cidr]||(PC[s.cidr]=parseCIDR(s.cidr));
+const overlap=(a,b)=>a.net<=b.bc&&b.net<=a.bc;
+function normMac(s){
+  s=String(s||"").trim();
+  if(/[^0-9a-f:.\-\s]/i.test(s))return null;
+  const h=s.replace(/[^0-9a-f]/gi,"");
+  return h.length===12?h.toUpperCase().match(/../g).join(":"):null;
+}
+
+/* ---------- red de ejemplo ---------- */
+function seed(){
+  // Datos de demostración: nombres, MAC y equipos inventados.
+  const mac=(a,b)=>"02:5C:"+[a,b,a*7+b*13,a*31+b].map(x=>(x&255).toString(16).padStart(2,"0").toUpperCase()).join(":");
+  const V=(vid,name,color,desc)=>({id:nid("v"),vid,name,color,desc});
+  const vS=V(10,"Servidores","#f472b6","Servidores, almacenamiento, electrónica de red y cámaras");
+  const vU=V(20,"Usuarios","#38bdf8","Puestos de trabajo, impresoras y puntos de acceso");
+  const vV=V(30,"Voz","#fb923c","Telefonía IP: centralita y terminales");
+  const vI=V(40,"Invitados","#a3e635","Wifi de visitas, aislada de la red interna");
+  const N=(v,cidr,name,gw,dns,df,dt,open)=>({id:nid("n"),vlan:v.id,cidr,name,gw,dns,dhcpFrom:df,dhcpTo:dt,hosts:{},open:open||{},fold:false});
+  const nS=N(vS,"192.168.10.0/24","Servidores e infraestructura","192.168.10.1","192.168.10.10, 192.168.10.11","","");
+  const nU=N(vU,"192.168.20.0/23","Usuarios — plantas 0 y 1","192.168.20.1","192.168.10.10, 192.168.10.11","192.168.20.100","192.168.21.200",{0:true});
+  const nV=N(vV,"192.168.30.0/25","Telefonía IP","192.168.30.1","192.168.10.10","192.168.30.20","192.168.30.120");
+  const nI=N(vI,"192.168.40.0/24","Wifi de invitados","192.168.40.1","9.9.9.9, 1.1.1.1","192.168.40.10","192.168.40.250");
+  let k=0;
+  const A=(s,ip,name,type,note,withMac)=>{s.hosts[ip]={st:"asig",name,type,mac:withMac===false?"":mac(ip2n(ip)&255,++k),note:note||""};};
+  const R=(s,from,to,note)=>{for(let n=ip2n(from);n<=ip2n(to);n++)s.hosts[n2ip(n)]={st:"resv",name:"",type:"otro",mac:"",note};};
+  A(nS,"192.168.10.1","fw-01","otro","Firewall perimetral, puerta de enlace de todas las VLAN");
+  A(nS,"192.168.10.2","sw-core-01","switch","Core, rack A");
+  A(nS,"192.168.10.3","sw-acc-02","switch","Acceso, rack A");
+  A(nS,"192.168.10.4","sw-p1-01","switch","Planta 1, rack B");
+  A(nS,"192.168.10.10","dc-01","servidor","Controlador de dominio y DNS");
+  A(nS,"192.168.10.11","dc-02","servidor","Controlador de dominio y DNS secundario");
+  A(nS,"192.168.10.20","srv-app-01","servidor","Servidor de aplicaciones, bonding de 2 NIC");
+  A(nS,"192.168.10.21","srv-db-01","servidor","Base de datos");
+  A(nS,"192.168.10.22","srv-vm-01","servidor","Host de virtualización");
+  A(nS,"192.168.10.30","nas-backup","servidor","Copias de seguridad");
+  ["erp","web","mail","print","monitor","vpn"].forEach((x,i)=>A(nS,"192.168.10."+(40+i),"vm-"+x+"-01","vm","Alojada en srv-vm-01"));
+  A(nS,"192.168.10.50","nvr-01","camara","Grabador CCTV");
+  ["entrada","pasillo-p0","pasillo-p1","almacen","parking","recepcion"].forEach((x,i)=>A(nS,"192.168.10."+(51+i),"cam-"+x,"camara","PoE desde sw-p1-01"));
+  A(nS,"192.168.10.60","ups-01","otro","SAI 3000 VA, tarjeta de red");
+  R(nS,"192.168.10.200","192.168.10.219","Ampliación de virtualización");
+  R(nS,"192.168.10.250","192.168.10.254","Gestión fuera de banda (iLO / iDRAC)");
+  ["p0-norte","p0-sur","p1-norte","p1-sur"].forEach((x,i)=>A(nU,"192.168.20."+(2+i),"ap-"+x,"ap","Gestión del AP, SSID corporativo"));
+  A(nU,"192.168.20.10","imp-recepcion","impresora","Multifunción planta 0");
+  A(nU,"192.168.20.11","imp-direccion","impresora","");
+  A(nU,"192.168.20.12","imp-admin-color","impresora","Color A3, administración");
+  ["direccion","gerencia","conta-01","conta-02","conta-03","rrhh-01","rrhh-02","recepcion","comercial-01","comercial-02","it-01","it-02"]
+    .forEach((x,i)=>A(nU,"192.168.20."+(20+i),"pc-"+x,"pc",i<2?"IP fija por VPN de proveedor":""));
+  R(nU,"192.168.20.50","192.168.20.59","Puestos de formación (aula)");
+  ["sala-reuniones","pantalla-hall","kiosko"].forEach((x,i)=>A(nU,"192.168.21."+(220+i),"pc-"+x,"pc","Planta 1"));
+  A(nV,"192.168.30.2","pbx-01","servidor","Centralita IP");
+  A(nV,"192.168.30.3","gw-sip-01","otro","Pasarela SIP con el operador");
+  ["recepcion","direccion","sala-reuniones","almacen"].forEach((x,i)=>A(nV,"192.168.30."+(10+i),"tel-"+x,"otro","Teléfono IP con IP fija"));
+  R(nV,"192.168.30.121","192.168.30.126","Videoconferencia (previsto)");
+  A(nI,"192.168.40.2","portal-cautivo","servidor","Portal de acceso de invitados",false);
+  R(nI,"192.168.40.251","192.168.40.254","Reservadas para el proveedor wifi");
+  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[]};
+}
+
+/* ---------- estado ---------- */
+let DB=null,S=null;
+const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[]});
+function newSite(name,st){return {id:nid("s"),name:name||"Oficina de ejemplo",state:migrate(st||seed())};}
+function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
+function migrate(d){
+  d=d&&typeof d==="object"?d:blankState();
+  d.zoom=+d.zoom||1;
+  d.vlans=Array.isArray(d.vlans)?d.vlans:[];
+  d.subnets=Array.isArray(d.subnets)?d.subnets.filter(s=>s&&!parseCIDR(s.cidr).err):[];
+  d.inventory=Array.isArray(d.inventory)?d.inventory:[];
+  d.vlans.forEach(v=>{v.id=v.id||nid("v");v.vid=+v.vid||1;v.name=v.name||("VLAN "+v.vid);v.color=v.color||"#94a3b8";v.desc=v.desc||"";});
+  d.subnets.forEach(s=>{
+    s.id=s.id||nid("n");s.cidr=parseCIDR(s.cidr).cidr;
+    ["name","gw","dns","dhcpFrom","dhcpTo"].forEach(f=>s[f]=s[f]||"");
+    if(s.vlan&&!d.vlans.some(v=>v.id===s.vlan))s.vlan="";
+    s.hosts=s.hosts&&typeof s.hosts==="object"?s.hosts:{};
+    s.open=s.open&&typeof s.open==="object"?s.open:{};
+    s.fold=!!s.fold;
+    Object.keys(s.hosts).forEach(k=>{
+      const h=s.hosts[k],n=ip2n(k);
+      if(!h||n==null){delete s.hosts[k];return;}
+      if(n2ip(n)!==k){delete s.hosts[k];s.hosts[n2ip(n)]=h;}
+      h.st=h.st==="resv"?"resv":"asig";h.name=h.name||"";h.type=TYPES[h.type]?h.type:"otro";h.mac=h.mac||"";h.note=h.note||"";
+    });
+  });
+  d.inventory.forEach(i=>{i.id=i.id||nid("i");i.name=i.name||"SIN NOMBRE";i.type=TYPES[i.type]?i.type:"otro";i.note=i.note||"";});
+  return d;
+}
+function parseDB(d){
+  if(!d||!Array.isArray(d.sites)||!d.sites.length)return null;
+  d.sites.forEach(r=>{r.id=r.id||nid("s");r.name=r.name||"Sede";r.state=migrate(r.state);});
+  return {v:1,current:d.sites.some(r=>r.id===d.current)?d.current:d.sites[0].id,
+          theme:d.theme||"dark",expScope:d.expScope||"site",sites:d.sites};
+}
+function load(){
+  try{const raw=localStorage.getItem(KEY);if(raw){const d=parseDB(JSON.parse(raw));if(d)return d;}}catch(e){}
+  return freshDB();
+}
+function site(){return DB.sites.find(r=>r.id===DB.current)||DB.sites[0];}
+function useSite(id){
+  const r=DB.sites.find(x=>x.id===id);if(!r)return;
+  DB.current=r.id;S=r.state;
+  sel.clear();closePop();hideTip();clearSearch();
+  fillSites();setZoom(S.zoom||1);render();layout();
+}
+let lsOK=true,fileHandle=null,fileName="",wTimer=null;
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(DB));lsOK=true;}
+  catch(e){lsOK=false;}
+  if(fileHandle){clearTimeout(wTimer);wTimer=setTimeout(writeFile,600);}
+  updateSaveUI();
+}
+function updateSaveUI(){
+  const n=$("#savest");if(!n)return;
+  if(fileHandle){n.textContent="💾 "+fileName;n.className="pill ok";n.title="Se guarda solo en tu archivo y en el navegador";}
+  else if(lsOK){n.textContent="Guardado en el navegador";n.className="pill ok";n.title="Vincula un archivo para no depender del navegador";}
+  else {n.textContent="⚠ SIN GUARDAR";n.className="pill bad";n.title="El navegador no permite guardar: vincula un archivo o exporta el JSON";}
+  const w=$("#warn"),mal=!lsOK&&!fileHandle;
+  w.classList.toggle("on",mal);
+  if(mal)w.innerHTML='<span>⚠ Este navegador no guarda datos de archivos locales: <b>si cierras, pierdes el trabajo</b>.</span>'+
+    '<span style="flex:1"></span><button id="warnLink">Guardar en un archivo</button><button id="warnExp">Exportar JSON</button>';
+  layout();
+}
+/* ---- archivo vinculado (se guarda solo, sobrevive a descargar otra copia) ---- */
+function idb(){return new Promise(res=>{try{const q=indexedDB.open("subnetscope",1);
+  q.onupgradeneeded=()=>q.result.createObjectStore("kv");q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);}catch(e){res(null);}});}
+async function idbPut(k,v){const d=await idb();if(!d)return;try{d.transaction("kv","readwrite").objectStore("kv").put(v,k);}catch(e){}}
+async function idbGet(k){const d=await idb();if(!d)return null;return new Promise(res=>{try{
+  const q=d.transaction("kv","readonly").objectStore("kv").get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);}catch(e){res(null);}});}
+async function writeFile(){
+  if(!fileHandle)return false;
+  try{
+    const w=await fileHandle.createWritable();
+    await w.write(JSON.stringify(DB,null,2));await w.close();
+    updateSaveUI();return true;
+  }catch(e){toast("No se pudo escribir en el archivo vinculado");return false;}
+}
+const FTYPES=[{description:"Plan de IPs",accept:{"application/json":[".json"]}}];
+async function linkFile(){
+  if(!window.showSaveFilePicker){toast("Tu navegador no permite vincular archivo: usa Exportar › JSON");return;}
+  try{
+    fileHandle=await showSaveFilePicker({suggestedName:"subnetscope-plan.json",types:FTYPES});
+    fileName=fileHandle.name;
+    await idbPut("handle",fileHandle);await idbPut("name",fileName);
+    await writeFile();
+    toast("Guardado automático en "+fileName);
+  }catch(e){}
+  updateSaveUI();
+}
+async function openFile(){
+  if(!window.showOpenFilePicker){toast("Usa Importar para cargar el JSON");return;}
+  try{
+    const [h]=await showOpenFilePicker({types:FTYPES});
+    const d=parseDB(JSON.parse(await (await h.getFile()).text()));
+    if(!d)throw 0;
+    DB=d;fileHandle=h;fileName=h.name;
+    await idbPut("handle",h);await idbPut("name",fileName);
+    save();setTheme(DB.theme);setScope(DB.expScope);useSite(DB.current);toast("Cargado desde "+fileName);
+  }catch(e){toast("No se pudo abrir el archivo");}
+}
+async function restoreHandle(){
+  try{
+    const h=await idbGet("handle");if(!h)return;
+    const perm=await h.queryPermission({mode:"readwrite"});
+    if(perm==="granted"){
+      fileHandle=h;fileName=h.name;
+      try{const d=parseDB(JSON.parse(await (await h.getFile()).text()));if(d){DB=d;setTheme(DB.theme);useSite(DB.current);}}catch(e){}
+    }else{
+      const nm=await idbGet("name")||"tu archivo";
+      toast("Pulsa 💾 Archivo para reconectar "+nm);
+    }
+  }catch(e){}
+  updateSaveUI();
+}
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const netsEl=$("#nets"), inner=$("#inner"), stage=$("#stage");
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2400);}
+function toastUndo(m,snap){                       // aviso con boton de deshacer (30 s)
+  const t=$("#toast");
+  t.innerHTML=esc(m)+' <button class="act">Deshacer</button>';
+  t.classList.add("on");clearTimeout(t._t);
+  t.querySelector(".act").onclick=()=>{
+    DB=parseDB(JSON.parse(snap));
+    save();useSite(DB.current);toast("Restaurado");
+  };
+  t._t=setTimeout(()=>{t.classList.remove("on");t.textContent="";},30000);
+}
+const snapDB=()=>JSON.stringify(DB);
+const fmt=n=>n.toLocaleString("es-ES");
+
+/* ---------- consultas ---------- */
+const subById=id=>S.subnets.find(s=>s.id===id);
+const vlanOf=s=>S.vlans.find(v=>v.id===s.vlan)||null;
+const vlansSorted=()=>S.vlans.slice().sort((a,b)=>a.vid-b.vid);
+// estado de cada IP: se calcula, solo se guardan las que tienen datos
+function cellFn(s){
+  const p=P(s),g=ip2n(s.gw),d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo),hasD=d0!=null&&d1!=null;
+  return n=>{
+    if(n===p.net)return "net";
+    if(n===p.bc)return "bc";
+    if(n===g)return "gw";
+    const h=s.hosts[n2ip(n)];
+    if(h)return h.st;
+    if(hasD&&n>=d0&&n<=d1)return "dhcp";
+    return "libre";
+  };
+}
+// recuento de un tramo (por defecto la subred entera)
+function stats(s,lo,hi){
+  const p=P(s);if(lo==null){lo=p.net;hi=p.bc;}
+  const a=Math.max(lo,p.net+1),b=Math.min(hi,p.bc-1),usable=Math.max(0,b-a+1);
+  const g=ip2n(s.gw),d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo),hasD=d0!=null&&d1!=null;
+  let asig=0,resv=0,gw=0,inD=0,dh=0;
+  for(const k in s.hosts){
+    const n=ip2n(k);if(n==null||n<a||n>b||n===g)continue;
+    if(s.hosts[k].st==="resv")resv++;else asig++;
+    if(hasD&&n>=d0&&n<=d1)inD++;
+  }
+  if(g!=null&&g>=a&&g<=b){gw=1;if(hasD&&g>=d0&&g<=d1)inD++;}
+  if(hasD)dh=Math.max(0,Math.min(d1,b)-Math.max(d0,a)+1-inD);
+  const used=asig+resv+gw;
+  return {usable,asig,resv,gw,dh,used,free:Math.max(0,usable-used-dh)};
+}
+function nextFree(s){const p=P(s),f=cellFn(s);for(let n=p.net+1;n<p.bc;n++)if(f(n)==="libre")return n;return null;}
+const overlapsOf=s=>S.subnets.filter(x=>x!==s&&overlap(P(s),P(x)));
+function subnetOfIp(n){return S.subnets.find(s=>{const p=P(s);return n>=p.net&&n<=p.bc;})||null;}
+function findHost(fn,skipS,skipIp){
+  for(const s of S.subnets)for(const ip in s.hosts){
+    if(s===skipS&&ip===skipIp)continue;
+    if(fn(s.hosts[ip]))return {s,ip,h:s.hosts[ip]};
+  }
+  return null;
+}
+function barHTML(st){
+  const t=st.usable||1,seg=(v,c)=>v?`<b style="width:${(v/t*100).toFixed(2)}%;background:${c}"></b>`:"";
+  return `<span class="bar">${seg(st.gw,ST.gw.c)}${seg(st.asig,ST.asig.c)}${seg(st.resv,ST.resv.c)}${seg(st.dh,ST.dhcp.c+"99")}</span>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  renderSide();
+  netsEl.innerHTML="";
+  if(!S.subnets.length){
+    netsEl.innerHTML=`<div class="nonet"><b>Esta sede no tiene subredes todavía.</b><br>
+      Crea primero las VLAN con <b>＋ VLAN</b> en el panel de la izquierda y después cada subred con <b>＋ Subred</b>.
+      Si ya tienes los equipos documentados en RackScope, tráetelos con <b>⇣ RackScope</b>.</div>`;
+  }
+  S.subnets.forEach((s,i)=>netsEl.appendChild(netNode(s,i)));
+  const add=document.createElement("button");add.className="addnet";add.textContent="＋ subred";
+  add.onclick=()=>editSubnet(null);netsEl.appendChild(add);
+  let used=0;S.subnets.forEach(s=>used+=stats(s).used);
+  $("#stats").textContent=`${S.vlans.length} VLAN · ${S.subnets.length} subredes · ${fmt(used)} IPs en uso`;
+  $("#invlist").innerHTML=S.inventory.map(i=>`<option value="${esc(i.name)}">${esc(TYPES[i.type])}${i.ip?" · "+i.ip:""}</option>`).join("");
+  markSel();
+  if(openC){const n=cellNode(openC.sid,openC.n);if(n){n.classList.add("sel");openNode=n;placePop();}else closePop();}
+}
+function counterText(st){
+  return `${fmt(st.used)} / ${fmt(st.usable)} usadas`+(st.dh?` · ${fmt(st.dh)} DHCP`:"");
+}
+function netNode(s,i){
+  const p=P(s),v=vlanOf(s),col=v?v.color:"#8797b5",st=stats(s),ov=overlapsOf(s);
+  const d=document.createElement("div");
+  d.className="net"+(s.fold?" fold":"");d.dataset.s=s.id;d.style.borderLeftColor=col;
+  const ch=(k,t)=>t?`<span class="chip"><em>${k}</em>${esc(t)}</span>`:"";
+  d.innerHTML=`<div class="net-head">
+      <button class="fd" data-act="fold" title="${s.fold?"Desplegar":"Plegar"}">${s.fold?"▸":"▾"}</button>
+      <span class="vt" style="--vc:${col}">${v?"VLAN "+v.vid+" · "+esc(v.name):"sin VLAN"}</span>
+      <b class="cidr">${s.cidr}</b>
+      <span class="nm">${esc(s.name)}</span>
+      <span class="cnt">${counterText(st)}</span>
+      <span class="free${st.free?"":" full"}">· ${st.free?"quedan "+fmt(st.free)+" libres":"sin IPs libres"}</span>
+      <span style="flex:1"></span>
+      <button class="btn sm acc" data-act="next" title="Ir a la primera IP libre de esta subred">⇢ Siguiente IP libre</button>
+      <span class="tools">
+        <button class="btn sm" data-act="edit" title="Editar subred">✎</button>
+        <button class="btn sm" data-act="up" ${i===0?"disabled":""} title="Subir">▲</button>
+        <button class="btn sm" data-act="down" ${i===S.subnets.length-1?"disabled":""} title="Bajar">▼</button>
+        <button class="btn sm danger" data-act="del" title="Eliminar subred">✕</button>
+      </span></div>
+    <div class="net-info">${ch("Máscara",maskOf(p.len))}${ch("Puerta de enlace",s.gw||"—")}${ch("DNS",s.dns)}
+      ${ch("DHCP",s.dhcpFrom&&s.dhcpTo?s.dhcpFrom+" – "+s.dhcpTo:"")}${ch("Broadcast",n2ip(p.bc))}</div>
+    ${ov.length?`<div class="net-warn">⚠ Se solapa con ${ov.map(x=>esc(x.cidr)).join(", ")}: dos subredes no deberían compartir direcciones.</div>`:""}
+    <div class="net-body"></div>`;
+  if(s.fold)return d;
+  const body=d.querySelector(".net-body");
+  if(p.len>=24){body.appendChild(cellsNode(s,p.net,p.bc));return d;}
+  const nb=p.size/256;
+  for(let b=0;b<nb;b++){
+    const lo=p.net+b*256,hi=lo+255,bs=stats(s,lo,hi),open=!!s.open[b];
+    const w=document.createElement("div");w.className="blk";
+    const hit=hits.size&&[...hits].some(k=>{const a=k.split("|");return a[0]===s.id&&+a[1]>=lo&&+a[1]<=hi;});
+    w.innerHTML=`<button class="blk-h${hit?" hashit":""}" data-act="blk" data-b="${b}"><span class="ar">${open?"▾":"▸"}</span>
+      <b>${n2ip(lo)}/24</b><span class="k">${counterText(bs)} · ${bs.free?"quedan "+bs.free+" libres":"sin libres"}</span>${barHTML(bs)}</button>`;
+    if(open)w.appendChild(cellsNode(s,lo,hi));
+    body.appendChild(w);
+  }
+  return d;
+}
+function cellsNode(s,lo,hi){
+  const g=document.createElement("div");g.className="cells";
+  const cols=Math.min(16,hi-lo+1),f=cellFn(s);
+  g.style.gridTemplateColumns=`40px repeat(${cols},var(--cs))`;
+  let h="";
+  for(let n=lo;n<=hi;n++){
+    if((n-lo)%cols===0)h+=`<span class="rl">.${n&255}</span>`;
+    const k=f(n),key=s.id+"|"+n;
+    const has=k==="gw"&&s.hosts[n2ip(n)];
+    h+=`<div class="c s-${k}${has?" has":""}${hits.has(key)?" hit":""}" data-s="${s.id}" data-n="${n}">${n&255}</div>`;
+  }
+  g.innerHTML=h;
+  return g;
+}
+const cellNode=(sid,n)=>netsEl.querySelector(`.c[data-s="${sid}"][data-n="${n}"]`);
+
+function renderSide(){
+  const vs=vlansSorted();
+  $("#vlist").innerHTML=vs.length?vs.map(v=>{
+    const k=S.subnets.filter(s=>s.vlan===v.id).length;
+    return `<div class="vl" data-v="${v.id}" title="${esc(v.desc)}"><i style="background:${v.color}"></i><span class="id">${v.vid}</span>
+      <span class="n">${esc(v.name)}</span><span class="k">${k} red${k===1?"":"es"}</span><button class="ed" data-ved="${v.id}" title="Editar VLAN">✎</button></div>`;
+  }).join(""):'<div class="sempty">Sin VLAN. Crea la primera con ＋ VLAN.</div>';
+  $("#slist").innerHTML=S.subnets.length?S.subnets.map(s=>{
+    const v=vlanOf(s),st=stats(s),pc=st.usable?Math.round(st.used/st.usable*100):0;
+    return `<button class="si" data-sgo="${s.id}" title="${esc(s.name)}"><i style="background:${v?v.color:"#8797b5"}"></i>
+      <span class="cidr">${s.cidr}</span><span class="k">${v?"VLAN "+v.vid+" · ":""}${pc}%</span>${barHTML(st)}</button>`;
+  }).join(""):'<div class="sempty">Sin subredes.</div>';
+  $("#ilist").innerHTML=S.inventory.length?S.inventory.map(i=>
+    `<div class="inv"><span class="n">${esc(i.name)}</span><button class="btn sm acc" data-give="${i.id}">Dar IP</button><button class="x" data-idel="${i.id}" title="Quitar de la lista">✕</button>
+      <small>${esc(TYPES[i.type])}${i.ip?" · en RackScope: "+esc(i.ip):""}${i.note?" · "+esc(i.note):""}</small></div>`).join("")
+    :'<div class="sempty">Aquí aparecen los equipos importados de RackScope que aún no tienen IP en esta sede.</div>';
+}
+
+/* ---------- aviso rapido ---------- */
+const tip=$("#tip");
+function showTip(node){
+  const s=subById(node.dataset.s),n=+node.dataset.n;if(!s)return;
+  const ip=n2ip(n),k=cellFn(s)(n),h=s.hosts[ip];
+  let t=`<b>${ip}</b> · <span style="color:${ST[k].c};font-weight:700">${ST[k].n}</span>`;
+  if(h&&h.name)t+=`<div>${esc(h.name)} <span class="fr">· ${esc(TYPES[h.type]||"")}</span></div>`;
+  if(h&&h.mac)t+=`<div class="fr">${esc(h.mac)}</div>`;
+  if(h&&h.note)t+=`<div class="fr">${esc(h.note.length>90?h.note.slice(0,90)+"…":h.note)}</div>`;
+  if(!h&&k==="libre")t+=`<div class="fr">Clic para asignarla</div>`;
+  tip.innerHTML=t;tip.classList.add("on");
+  const r=node.getBoundingClientRect();
+  let x=r.right+10,y=r.top-6;
+  if(x+tip.offsetWidth>innerWidth)x=r.left-tip.offsetWidth-10;
+  if(y+tip.offsetHeight>innerHeight)y=innerHeight-tip.offsetHeight-10;
+  tip.style.left=Math.max(6,x)+"px";tip.style.top=Math.max(60,y)+"px";
+}
+function hideTip(){tip.classList.remove("on");}
+
+/* ---------- ficha de una IP ---------- */
+const pop=$("#pop");
+let openC=null,openNode=null;
+function placePop(){
+  if(!openNode||!pop.classList.contains("on"))return;
+  const r=openNode.getBoundingClientRect();
+  let x=r.right+12,y=r.top-8;
+  if(x+340>innerWidth)x=r.left-342;
+  if(x<8)x=8;
+  y=Math.max(58,Math.min(y,innerHeight-Math.min(pop.offsetHeight,520)-12));
+  pop.style.left=x+"px";pop.style.top=y+"px";
+}
+function closePop(){pop.classList.remove("on");openNode=null;openC=null;$$(".c.sel").forEach(p=>p.classList.remove("sel"));hideTip();}
+function openCell(sid,n,node,focus){
+  const s=subById(sid);if(!s||!node)return;
+  $$(".c.sel").forEach(x=>x.classList.remove("sel"));
+  node.classList.add("sel");
+  openC={sid,n};openNode=node;
+  const ip=n2ip(n),k=cellFn(s)(n),h=s.hosts[ip]||null,v=vlanOf(s);
+  $("#popT").textContent=ip;
+  const pp=$("#popP");pp.textContent=ST[k].n;pp.style.color=ST[k].c;pp.style.borderColor=ST[k].c;pp.style.background=ST[k].c+"22";
+  const ctx=`<div class="ctx">${v?"VLAN "+v.vid+" · "+esc(v.name)+" · ":""}${s.cidr}</div>`;
+  if(k==="net"||k==="bc"){
+    $("#popB").innerHTML=ctx+`<div class="empty">Dirección de <b>${k==="net"?"red":"broadcast"}</b> de ${s.cidr}.<br><span class="hint">No se asigna a ningún equipo.</span></div>`;
+    $("#popF").style.display="none";
+  }else{
+    const d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo),inD=d0!=null&&d1!=null&&n>=d0&&n<=d1;
+    let aviso="";
+    if(k==="gw")aviso="Es la <b>puerta de enlace</b> de la subred. Puedes anotar qué equipo la tiene.";
+    if(inD)aviso+=(aviso?"<br>":"")+"Está dentro del <b>rango DHCP</b>: si la fijas, exclúyela también en el servidor DHCP.";
+    const x=h||{name:"",type:"pc",mac:"",note:""};
+    $("#popB").innerHTML=ctx+(aviso?`<div class="note">${aviso}</div>`:"")+`
+      <div class="fld"><label>Equipo</label><input id="p_name" list="invlist" value="${esc(x.name)}" placeholder="srv-app-01, imp-recepcion…" autocomplete="off"></div>
+      <div class="grid2">
+        <div class="fld"><label>Tipo</label><select id="p_type">${Object.entries(TYPES).map(([a,b])=>`<option value="${a}"${x.type===a?" selected":""}>${b}</option>`).join("")}</select></div>
+        <div class="fld"><label>MAC</label><input id="p_mac" class="mono" value="${esc(x.mac)}" placeholder="00:11:22:33:44:55"></div>
+      </div>
+      <div class="fld"><label>Nota</label><textarea id="p_note" placeholder="Ubicación, servicio, responsable…">${esc(x.note)}</textarea></div>`;
+    $("#popF").style.display="";
+    $("#popAs").textContent=h&&h.st==="asig"?"Guardar":"Asignar";
+    $("#popRs").textContent=h&&h.st==="resv"?"Guardar reserva":"Reservar";
+    $("#popFr").disabled=!h;
+    $("#p_name").addEventListener("change",()=>{
+      const it=S.inventory.find(i=>i.name.toLowerCase()===$("#p_name").value.trim().toLowerCase());
+      if(it){$("#p_type").value=it.type;if(!$("#p_note").value)$("#p_note").value=it.note||"";}
+    });
+    if(focus)setTimeout(()=>{const f=$("#p_name");if(f)f.focus();},60);
+  }
+  pop.classList.add("on");
+  placePop();
+}
+function commitCell(st){
+  if(!openC)return;
+  const s=subById(openC.sid),n=openC.n,ip=n2ip(n);
+  const name=$("#p_name").value.trim(),type=$("#p_type").value,note=$("#p_note").value.trim();
+  let mac=$("#p_mac").value.trim();
+  if(st==="asig"&&!name){toast("Escribe el nombre del equipo");$("#p_name").focus();return;}
+  if(mac){const m=normMac(mac);if(!m){toast("MAC no válida: usa el formato 00:11:22:33:44:55");$("#p_mac").focus();return;}mac=m;}
+  if(mac){const d=findHost(h=>h.mac===mac,s,ip);
+    if(d&&!confirm(`La MAC ${mac} ya está en ${d.ip} (${d.h.name||"sin nombre"}). ¿Guardar igualmente?`))return;}
+  if(st==="asig"){const d=findHost(h=>h.st==="asig"&&h.name.toLowerCase()===name.toLowerCase(),s,ip);
+    if(d&&!confirm(`"${name}" ya tiene la IP ${d.ip}. ¿Darle también ${ip}?`))return;}
+  s.hosts[ip]={st,name,type,mac,note};
+  if(name){const i=S.inventory.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i>=0)S.inventory.splice(i,1);}
+  save();closePop();render();
+  const c=cellNode(s.id,n);if(c)flash(c);
+  toast(st==="asig"?`${ip} asignada a ${name}`:`${ip} reservada`);
+}
+function releaseCell(){
+  if(!openC)return;
+  const s=subById(openC.sid),ip=n2ip(openC.n);
+  if(!s.hosts[ip])return;
+  const snap=snapDB();
+  delete s.hosts[ip];
+  save();closePop();render();
+  toastUndo(ip+" liberada.",snap);
+}
+$("#popAs").onclick=()=>commitCell("asig");
+$("#popRs").onclick=()=>commitCell("resv");
+$("#popFr").onclick=releaseCell;
+$("#popX").onclick=closePop;
+pop.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.tagName==="INPUT"){ev.preventDefault();commitCell("asig");}});
+
+function flash(c){c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");}
+// despliega lo necesario para que la IP este en pantalla
+function reveal(s,n){
+  let ch=false;const p=P(s);
+  if(s.fold){s.fold=false;ch=true;}
+  if(p.len<24){const b=Math.floor((n-p.net)/256);if(!s.open[b]){s.open[b]=true;ch=true;}}
+  if(ch){save();render();}
+  return cellNode(s.id,n);
+}
+function goTo(sid,n,withPop){
+  const s=subById(sid);if(!s)return;
+  const c=reveal(s,n);if(!c)return;
+  c.scrollIntoView({block:"center",inline:"nearest",behavior:"smooth"});
+  flash(c);
+  if(withPop)setTimeout(()=>{const x=cellNode(sid,n);if(x)openCell(sid,n,x,true);},380);
+}
+
+/* ---------- interaccion con la cuadricula ---------- */
+let skipClick=false;
+netsEl.addEventListener("click",ev=>{
+  const act=ev.target.closest("[data-act]");
+  if(act){handleAct(act);return;}
+  const c=ev.target.closest(".c");if(!c)return;
+  if(ms||skipClick)return;
+  openCell(c.dataset.s,+c.dataset.n,c,true);
+});
+netsEl.addEventListener("mouseover",ev=>{const c=ev.target.closest(".c");if(c)showTip(c);});
+netsEl.addEventListener("mouseout",ev=>{if(ev.target.closest(".c"))hideTip();});
+document.addEventListener("click",ev=>{
+  if(pop.contains(ev.target)||ev.target.closest(".c")||ev.target.closest("#top")||ev.target.closest("#veil")||ev.target.closest("#sres"))return;
+  closePop();
+});
+document.addEventListener("keydown",ev=>{
+  if(ev.key!=="Escape")return;
+  if(veil.classList.contains("on")){closeModal();return;}
+  if(pop.classList.contains("on")){closePop();return;}
+  if(ms){setMS(false);return;}
+  if(q)clearSearch();
+});
+function handleAct(btn){
+  const act=btn.dataset.act,nn=btn.closest(".net"),s=nn&&subById(nn.dataset.s);
+  if(!s)return;
+  const i=S.subnets.indexOf(s);
+  if(act==="fold"){s.fold=!s.fold;save();render();}
+  if(act==="blk"){const b=+btn.dataset.b;s.open[b]=!s.open[b];if(!s.open[b])delete s.open[b];save();render();}
+  if(act==="next"){
+    const n=nextFree(s);
+    if(n==null)toast("No quedan IPs libres en "+s.cidr+" (fuera del rango DHCP)");
+    else goTo(s.id,n,true);
+  }
+  if(act==="edit")editSubnet(s);
+  if(act==="up"&&i>0){S.subnets.splice(i,1);S.subnets.splice(i-1,0,s);save();render();}
+  if(act==="down"&&i<S.subnets.length-1){S.subnets.splice(i,1);S.subnets.splice(i+1,0,s);save();render();}
+  if(act==="del"){
+    const k=Object.keys(s.hosts).length;
+    if(!confirm(`¿Eliminar la subred ${s.cidr}${k?" y sus "+k+" IPs documentadas":""}?`))return;
+    const snap=snapDB();
+    S.subnets.splice(i,1);closePop();save();render();
+    toastUndo("Subred "+s.cidr+" eliminada.",snap);
+  }
+}
+
+/* ---------- seleccion multiple ---------- */
+let ms=false,anchor=null,dragSel=null;
+const sel=new Set();
+function setMS(on){
+  ms=on;document.body.classList.toggle("ms",on);
+  $("#msBtn").classList.toggle("on",on);
+  if(!on){sel.clear();anchor=null;}
+  closePop();markSel();layout();
+}
+function markSel(){
+  $$(".c.msel").forEach(n=>n.classList.remove("msel"));
+  sel.forEach(k=>{const a=k.split("|");const n=cellNode(a[0],a[1]);if(n)n.classList.add("msel");});
+  const c=$("#selcnt");if(c)c.textContent=sel.size+" sel.";
+}
+function rangeKeys(sid,a,b){const r=[];for(let i=Math.min(a,b);i<=Math.max(a,b);i++)r.push(sid+"|"+i);return r;}
+netsEl.addEventListener("pointerdown",ev=>{
+  if(ev.button!==0)return;
+  const c=ev.target.closest(".c");if(!c)return;
+  const mod=ev.ctrlKey||ev.metaKey||ev.shiftKey;
+  if(!ms&&!mod)return;
+  if(!ms)setMS(true);
+  ev.preventDefault();hideTip();
+  const sid=c.dataset.s,n=+c.dataset.n,key=sid+"|"+n;
+  skipClick=true;
+  if(ev.shiftKey&&anchor&&anchor.sid===sid){rangeKeys(sid,anchor.n,n).forEach(k=>sel.add(k));markSel();return;}
+  const adding=!sel.has(key);
+  dragSel={sid,start:n,adding,base:new Set(sel)};
+  if(adding)sel.add(key);else sel.delete(key);
+  anchor={sid,n};markSel();
+});
+netsEl.addEventListener("pointerover",ev=>{
+  if(!dragSel)return;
+  const c=ev.target.closest(".c");if(!c||c.dataset.s!==dragSel.sid)return;
+  sel.clear();dragSel.base.forEach(k=>sel.add(k));
+  rangeKeys(dragSel.sid,dragSel.start,+c.dataset.n).forEach(k=>dragSel.adding?sel.add(k):sel.delete(k));
+  markSel();
+});
+addEventListener("pointerup",()=>{dragSel=null;setTimeout(()=>skipClick=false,60);});
+function selItems(){
+  const out=[];
+  sel.forEach(k=>{const a=k.split("|"),s=subById(a[0]);if(!s)return;const n=+a[1];out.push({s,n,ip:n2ip(n),k:cellFn(s)(n)});});
+  return out.sort((x,y)=>x.n-y.n);
+}
+function rangesText(items){                         // "a – b, c" para el resumen
+  const out=[];let st=null,prev=null;
+  items.forEach(x=>{
+    if(st&&x.n===prev.n+1&&x.s===prev.s){prev=x;return;}
+    if(st)out.push(st===prev?st.ip:st.ip+" – "+prev.ip);
+    st=prev=x;
+  });
+  if(st)out.push(st===prev?st.ip:st.ip+" – "+prev.ip);
+  return out.length>6?out.slice(0,6).join(", ")+"… (+"+(out.length-6)+" tramos)":out.join(", ");
+}
+$("#msbar").addEventListener("click",ev=>{
+  const b=ev.target.closest("[data-ms]");if(!b)return;
+  const m=b.dataset.ms;
+  if(m==="clr"){sel.clear();markSel();return;}
+  if(!sel.size){toast("Marca primero alguna IP");return;}
+  if(m==="resv")msReserve();
+  if(m==="free")msFree();
+});
+$("#msoff").onclick=()=>setMS(false);
+$("#msBtn").onclick=()=>setMS(!ms);
+function msReserve(){
+  const items=selItems();
+  const ok=items.filter(x=>x.k!=="net"&&x.k!=="bc"&&!(x.s.hosts[x.ip]&&x.s.hosts[x.ip].st==="asig"));
+  const skip=items.length-ok.length;
+  if(!ok.length){toast("Nada que reservar: son direcciones de red/broadcast o ya están asignadas");return;}
+  modal.innerHTML=`<h3>Reservar ${ok.length} IP${ok.length>1?"s":""}</h3>
+  <div class="body">
+    <div class="hint">${esc(rangesText(ok))}</div>
+    ${skip?`<div class="hint">Se saltan <b>${skip}</b>: direcciones de red o broadcast, o IPs ya asignadas a un equipo.</div>`:""}
+    <div class="fld"><label>Motivo (opcional)</label><input id="r_note" placeholder="Ampliación, impresoras planta 2…"></div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Reservar</button></div>`;
+  veil.classList.add("on");
+  setTimeout(()=>$("#r_note").focus(),40);
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const note=$("#r_note").value.trim();
+    ok.forEach(x=>{const h=x.s.hosts[x.ip];x.s.hosts[x.ip]={st:"resv",name:h?h.name:"",type:h?h.type:"otro",mac:h?h.mac:"",note:note||(h?h.note:"")};});
+    sel.clear();save();closeModal();render();toast(ok.length+" IPs reservadas");
+  };
+  modal.onkeydown=ev=>{if(ev.key==="Enter")$("#m_ok").click();};
+}
+function msFree(){
+  const items=selItems().filter(x=>x.s.hosts[x.ip]);
+  if(!items.length){toast("Ninguna de las marcadas tiene datos que liberar");return;}
+  const asg=items.filter(x=>x.s.hosts[x.ip].st==="asig");
+  if(asg.length&&!confirm(`Se van a liberar ${items.length} IPs, de ellas ${asg.length} asignadas a equipos (${asg.slice(0,4).map(x=>x.s.hosts[x.ip].name).join(", ")}${asg.length>4?"…":""}). ¿Seguro?`))return;
+  const snap=snapDB();
+  items.forEach(x=>delete x.s.hosts[x.ip]);
+  sel.clear();save();render();
+  toastUndo(items.length+" IPs liberadas.",snap);
+}
+
+/* ---------- buscador ---------- */
+let q="",hits=new Set(),sresList=[],sresCur=0;
+const sres=$("#sres"),search=$("#search");
+function searchHits(q){
+  const out=[],ql=q.toLowerCase(),ipq=ip2n(q);
+  const looksIp=/^[\d.]+$/.test(q),qh=ql.replace(/[^0-9a-f]/g,"");
+  const looksMac=qh.length>=4&&/^[0-9a-f:.\-]+$/.test(ql)&&/[a-f:\-]/.test(ql);
+  S.subnets.forEach(s=>{
+    const p=P(s);
+    if(ipq!=null&&ipq>=p.net&&ipq<=p.bc)out.push({s,n:ipq});
+    const keys=Object.keys(s.hosts);
+    if(s.gw&&!s.hosts[s.gw])keys.push(s.gw);
+    keys.forEach(ip=>{
+      const n=ip2n(ip);if(n===ipq)return;
+      const h=s.hosts[ip]||{name:"",mac:""};
+      const m=(looksIp&&ip.includes(q))||(h.name&&h.name.toLowerCase().includes(ql))||
+              (looksMac&&h.mac&&h.mac.replace(/:/g,"").toLowerCase().includes(qh));
+      if(m)out.push({s,n});
+    });
+  });
+  return out.sort((a,b)=>S.subnets.indexOf(a.s)-S.subnets.indexOf(b.s)||a.n-b.n);
+}
+function runSearch(){
+  q=search.value.trim();
+  hits=new Set();sresList=[];sresCur=0;
+  if(!q){clearSearch();return;}
+  sresList=searchHits(q);
+  sresList.forEach(x=>hits.add(x.s.id+"|"+x.n));
+  document.body.classList.toggle("searching",hits.size>0);
+  render();
+  drawSres();
+}
+function drawSres(){
+  if(!q){sres.classList.remove("on");return;}
+  const list=sresList.slice(0,40);
+  sres.innerHTML=list.length?list.map((x,i)=>{
+    const ip=n2ip(x.n),h=x.s.hosts[ip],k=cellFn(x.s)(x.n),v=vlanOf(x.s);
+    return `<button data-i="${i}"${i===sresCur?' class="cur"':""}><b>${ip}</b>${esc(h&&h.name?h.name:ST[k].n)}${h&&h.mac?" · "+esc(h.mac):""}
+      <small>${v?"VLAN "+v.vid+" · "+esc(v.name)+" · ":""}${x.s.cidr} · ${ST[k].n}</small></button>`;
+  }).join("")+(sresList.length>40?`<div class="none">…y ${sresList.length-40} más</div>`:"")
+  :'<div class="none">Sin resultados en esta sede</div>';
+  const r=search.getBoundingClientRect();
+  sres.style.top=(r.bottom+5)+"px";
+  sres.style.left=Math.max(8,Math.min(r.left,innerWidth-340))+"px";
+  sres.classList.add("on");
+}
+function pickResult(i,withPop){
+  const x=sresList[i];if(!x)return;
+  sres.classList.remove("on");
+  goTo(x.s.id,x.n,withPop);
+}
+function clearSearch(){
+  q="";hits=new Set();sresList=[];search.value="";
+  sres.classList.remove("on");document.body.classList.remove("searching");
+  if(S)render();
+}
+search.addEventListener("input",runSearch);
+search.addEventListener("focus",()=>{if(q)drawSres();});
+search.addEventListener("keydown",ev=>{
+  if(ev.key==="ArrowDown"){ev.preventDefault();sresCur=Math.min(sresList.length-1,sresCur+1);drawSres();}
+  if(ev.key==="ArrowUp"){ev.preventDefault();sresCur=Math.max(0,sresCur-1);drawSres();}
+  if(ev.key==="Enter"){ev.preventDefault();pickResult(sresCur,true);}
+  if(ev.key==="Escape"){ev.stopPropagation();clearSearch();search.blur();}
+});
+sres.addEventListener("click",ev=>{const b=ev.target.closest("[data-i]");if(b)pickResult(+b.dataset.i,true);});
+document.addEventListener("click",ev=>{if(!ev.target.closest("#sres")&&ev.target!==search)sres.classList.remove("on");});
+
+/* ---------- modales ---------- */
+const veil=$("#veil"),modal=$("#modal");
+function closeModal(){veil.classList.remove("on");modal.innerHTML="";modal.onkeydown=null;}
+veil.addEventListener("click",ev=>{if(ev.target===veil)closeModal();});
+
+function editVlan(v){
+  const isNew=!v;
+  const maxId=S.vlans.reduce((a,x)=>Math.max(a,x.vid),0);
+  v=v||{id:nid("v"),vid:maxId?Math.min(4094,Math.floor(maxId/10)*10+10):10,name:"",color:VCOL[S.vlans.length%VCOL.length],desc:""};
+  const uso=S.subnets.filter(s=>s.vlan===v.id);
+  modal.innerHTML=`<h3>${isNew?"Nueva VLAN":"Editar VLAN"}</h3>
+  <div class="body">
+    <div class="grid2">
+      <div class="fld"><label>ID (1–4094)</label><input id="v_vid" type="number" min="1" max="4094" value="${v.vid}"></div>
+      <div class="fld"><label>Color</label><div class="sw"><input id="v_col" type="color" value="${v.color}">
+        ${VCOL.map(c=>`<button type="button" data-c="${c}" style="background:${c}" title="${c}"></button>`).join("")}</div></div>
+    </div>
+    <div class="fld"><label>Nombre</label><input id="v_name" value="${esc(v.name)}" placeholder="Usuarios, Servidores, Voz…"></div>
+    <div class="fld"><label>Descripción</label><textarea id="v_desc" placeholder="Qué va en esta VLAN">${esc(v.desc)}</textarea></div>
+    ${uso.length?`<div class="hint">La usan ${uso.length} subred(es): ${uso.map(s=>s.cidr).join(", ")}</div>`:""}
+  </div>
+  <div class="foot">
+    ${isNew?"":'<button class="btn danger" id="m_del">Eliminar</button>'}
+    <span style="flex:1"></span>
+    <button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button>
+  </div>`;
+  veil.classList.add("on");
+  setTimeout(()=>$("#v_name").focus(),40);
+  modal.querySelector(".sw").addEventListener("click",ev=>{const b=ev.target.closest("[data-c]");if(b)$("#v_col").value=b.dataset.c;});
+  $("#m_cancel").onclick=closeModal;
+  const del=$("#m_del");
+  if(del)del.onclick=()=>{
+    if(!confirm(`¿Eliminar la VLAN ${v.vid}?`+(uso.length?` Sus ${uso.length} subred(es) se quedan sin VLAN, pero no se borran.`:"")))return;
+    const snap=snapDB();
+    S.vlans=S.vlans.filter(x=>x.id!==v.id);uso.forEach(s=>s.vlan="");
+    save();closeModal();render();toastUndo("VLAN "+v.vid+" eliminada.",snap);
+  };
+  $("#m_ok").onclick=()=>{
+    const vid=Math.round(+$("#v_vid").value);
+    if(!(vid>=1&&vid<=4094)){toast("El ID de VLAN tiene que estar entre 1 y 4094");return;}
+    const dup=S.vlans.find(x=>x.vid===vid&&x.id!==v.id);
+    if(dup){toast(`La VLAN ${vid} ya existe (${dup.name})`);return;}
+    const name=$("#v_name").value.trim();
+    if(!name){toast("Ponle un nombre a la VLAN");return;}
+    v.vid=vid;v.name=name;v.color=$("#v_col").value;v.desc=$("#v_desc").value.trim();
+    if(isNew)S.vlans.push(v);
+    save();closeModal();render();toast("VLAN "+vid+" guardada");
+  };
+  modal.onkeydown=ev=>{if(ev.key==="Enter"&&ev.target.tagName!=="TEXTAREA")$("#m_ok").click();};
+}
+
+function editSubnet(s){
+  const isNew=!s;
+  if(isNew&&!S.vlans.length&&!confirm("Todavía no hay ninguna VLAN en esta sede. ¿Crear la subred sin VLAN? (Cancelar para crear antes la VLAN)")){editVlan(null);return;}
+  const vs=vlansSorted();
+  s=s||{id:nid("n"),cidr:"",name:"",vlan:vs.length?vs[0].id:"",gw:"",dns:"",dhcpFrom:"",dhcpTo:"",hosts:{},open:{},fold:false};
+  modal.innerHTML=`<h3>${isNew?"Nueva subred":"Editar subred "+esc(s.cidr)}</h3>
+  <div class="body">
+    <div class="grid2">
+      <div class="fld"><label>Red (CIDR, de /16 a /30)</label><input id="n_cidr" class="mono" value="${esc(s.cidr)}" placeholder="192.168.10.0/24" autocomplete="off"></div>
+      <div class="fld"><label>VLAN</label><select id="n_vlan"><option value="">— sin VLAN —</option>
+        ${vs.map(v=>`<option value="${v.id}"${s.vlan===v.id?" selected":""}>${v.vid} · ${esc(v.name)}</option>`).join("")}</select></div>
+    </div>
+    <div class="hint" id="n_hint"></div>
+    <div class="fld"><label>Nombre o descripción</label><input id="n_name" value="${esc(s.name)}" placeholder="Usuarios planta 1, Servidores CPD…"></div>
+    <div class="grid2">
+      <div class="fld"><label>Puerta de enlace</label><input id="n_gw" class="mono" value="${esc(s.gw)}"></div>
+      <div class="fld"><label>DNS (separados por comas)</label><input id="n_dns" class="mono" value="${esc(s.dns)}" placeholder="192.168.10.10, 192.168.10.11"></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label>DHCP desde (opcional)</label><input id="n_d0" class="mono" value="${esc(s.dhcpFrom)}"></div>
+      <div class="fld"><label>DHCP hasta</label><input id="n_d1" class="mono" value="${esc(s.dhcpTo)}"></div>
+    </div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button></div>`;
+  veil.classList.add("on");
+  const hint=()=>{
+    const r=parseCIDR($("#n_cidr").value),h=$("#n_hint");
+    if(!$("#n_cidr").value.trim()){h.innerHTML="Escribe la dirección de red y el prefijo.";return;}
+    if(r.err){h.innerHTML=`<span class="bad">${esc(r.err)}</span>${r.fix?` <button class="btn sm" id="n_fix">Usar ${r.fix}</button>`:""}`;return;}
+    const ov=S.subnets.filter(x=>x.id!==s.id&&overlap(r,P(x)));
+    h.innerHTML=`Red <b>${n2ip(r.net)}</b> · máscara <b>${maskOf(r.len)}</b> · broadcast ${n2ip(r.bc)}<br>
+      <b>${fmt(r.size-2)}</b> IPs útiles: ${n2ip(r.net+1)} – ${n2ip(r.bc-1)}${r.len<24?` · se verá en ${r.size/256} bloques /24`:""}`+
+      (ov.length?`<div class="bad" style="margin-top:4px">⚠ Se solapa con ${ov.map(x=>esc(x.cidr)).join(", ")}</div>`:"");
+    $("#n_gw").placeholder="p. ej. "+n2ip(r.net+1);
+    $("#n_d0").placeholder="p. ej. "+n2ip(Math.min(r.bc-1,r.net+Math.max(2,Math.floor(r.size*.4))));
+    $("#n_d1").placeholder="p. ej. "+n2ip(Math.max(r.net+1,r.bc-Math.max(1,Math.floor(r.size*.05))));
+  };
+  $("#n_cidr").addEventListener("input",hint);hint();
+  $("#n_hint").addEventListener("click",ev=>{if(ev.target.id==="n_fix"){$("#n_cidr").value=parseCIDR($("#n_cidr").value).fix;hint();}});
+  setTimeout(()=>$("#n_cidr").focus(),40);
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const r=parseCIDR($("#n_cidr").value);
+    if(r.err){toast(r.err);$("#n_cidr").focus();return;}
+    const util=n=>n!=null&&n>r.net&&n<r.bc;
+    const gwT=$("#n_gw").value.trim(),gw=gwT?ip2n(gwT):null;
+    if(gwT&&!util(gw)){toast("La puerta de enlace tiene que ser una IP útil de "+r.cidr);$("#n_gw").focus();return;}
+    const dns=$("#n_dns").value.split(/[\s,;]+/).filter(Boolean);
+    const badDns=dns.find(x=>ip2n(x)==null);
+    if(badDns){toast("DNS no válido: "+badDns);$("#n_dns").focus();return;}
+    const d0T=$("#n_d0").value.trim(),d1T=$("#n_d1").value.trim();
+    let d0=null,d1=null;
+    if(d0T||d1T){
+      d0=ip2n(d0T);d1=ip2n(d1T);
+      if(!util(d0)||!util(d1)){toast("El rango DHCP tiene que estar dentro de "+r.cidr+" (sin red ni broadcast)");return;}
+      if(d0>d1){toast("El rango DHCP está al revés: el inicio es mayor que el final");return;}
+    }
+    const ov=S.subnets.filter(x=>x.id!==s.id&&overlap(r,P(x)));
+    if(ov.length&&!confirm(`${r.cidr} se solapa con ${ov.map(x=>x.cidr).join(", ")}. ¿Guardar igualmente?`))return;
+    const lost=Object.keys(s.hosts).filter(ip=>{const n=ip2n(ip);return n<=r.net||n>=r.bc;});
+    if(lost.length&&!confirm(`${lost.length} IPs documentadas quedan fuera de ${r.cidr} y se perderán (${lost.slice(0,5).join(", ")}${lost.length>5?"…":""}). ¿Seguir?`))return;
+    const changed=s.cidr!==r.cidr;
+    lost.forEach(ip=>delete s.hosts[ip]);
+    s.cidr=r.cidr;s.vlan=$("#n_vlan").value;s.name=$("#n_name").value.trim();
+    s.gw=gw!=null?n2ip(gw):"";s.dns=dns.map(x=>n2ip(ip2n(x))).join(", ");
+    s.dhcpFrom=d0!=null?n2ip(d0):"";s.dhcpTo=d1!=null?n2ip(d1):"";
+    if(changed)s.open=r.len<24?{0:true}:{};
+    if(isNew)S.subnets.push(s);
+    save();closeModal();render();
+    const nn=netsEl.querySelector(`.net[data-s="${s.id}"]`);if(nn){nn.scrollIntoView({block:"nearest",behavior:"smooth"});flash(nn);}
+    toast("Subred "+r.cidr+" guardada");
+  };
+  modal.onkeydown=ev=>{if(ev.key==="Enter")$("#m_ok").click();};
+}
+
+/* ---------- panel lateral ---------- */
+$("#vAdd").onclick=()=>editVlan(null);
+$("#nAdd").onclick=()=>editSubnet(null);
+$("#side").addEventListener("click",ev=>{
+  const ed=ev.target.closest("[data-ved]");
+  if(ed){editVlan(S.vlans.find(v=>v.id===ed.dataset.ved));return;}
+  const vl=ev.target.closest("[data-v]");
+  if(vl){
+    const s=S.subnets.find(x=>x.vlan===vl.dataset.v);
+    if(!s){toast("Esta VLAN no tiene subredes todavía");return;}
+    showNet(s);return;
+  }
+  const sg=ev.target.closest("[data-sgo]");
+  if(sg){showNet(subById(sg.dataset.sgo));return;}
+  const gv=ev.target.closest("[data-give]");
+  if(gv){giveIP(S.inventory.find(i=>i.id===gv.dataset.give));return;}
+  const dl=ev.target.closest("[data-idel]");
+  if(dl){S.inventory=S.inventory.filter(i=>i.id!==dl.dataset.idel);save();render();}
+});
+function showNet(s){
+  if(!s)return;
+  const nn=netsEl.querySelector(`.net[data-s="${s.id}"]`);if(!nn)return;
+  nn.scrollIntoView({block:"start",behavior:"smooth"});
+  nn.classList.remove("flash");void nn.offsetWidth;nn.classList.add("flash");
+  setTimeout(()=>nn.classList.remove("flash"),1400);
+}
+// asigna IP a un equipo de la lista importada
+function giveIP(it){
+  if(!it)return;
+  if(!S.subnets.length){toast("Crea antes alguna subred");return;}
+  const orig=it.ip?ip2n(it.ip):null,os=orig!=null?subnetOfIp(orig):null;
+  const origOk=os&&["libre","dhcp","gw"].includes(cellFn(os)(orig))&&!os.hosts[it.ip];
+  modal.innerHTML=`<h3>Dar IP a ${esc(it.name)}</h3>
+  <div class="body">
+    <div class="hint">${esc(TYPES[it.type])}${it.note?" · "+esc(it.note):""}</div>
+    ${origOk?`<label class="chk"><input type="checkbox" id="g_orig" checked> Usar la IP que tenía en RackScope: <b>${esc(it.ip)}</b> (${os.cidr})</label>`:""}
+    <div class="fld" id="g_w"><label>Subred</label><select id="g_s">${S.subnets.map(s=>{const v=vlanOf(s),st=stats(s);
+      return `<option value="${s.id}"${os===s?" selected":""}${st.free?"":" disabled"}>${s.cidr}${v?" · VLAN "+v.vid+" "+esc(v.name):""} · ${st.free} libres</option>`;}).join("")}</select></div>
+    <div class="hint">Se le da la primera IP libre de la subred elegida (fuera del rango DHCP).</div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Asignar</button></div>`;
+  veil.classList.add("on");
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    let s,n;
+    if(origOk&&$("#g_orig").checked){s=os;n=orig;}
+    else{s=subById($("#g_s").value);n=s?nextFree(s):null;}
+    if(n==null){toast("No quedan IPs libres en esa subred");return;}
+    const ip=n2ip(n);
+    s.hosts[ip]={st:"asig",name:it.name,type:it.type,mac:"",note:it.note||""};
+    S.inventory=S.inventory.filter(x=>x!==it);
+    save();closeModal();render();goTo(s.id,n,false);
+    toast(`${ip} asignada a ${it.name}`);
+  };
+}
+
+/* ---------- zoom / tema / maquetacion ---------- */
+function setZoom(z){
+  S.zoom=Math.max(.5,Math.min(1.6,Math.round(z*100)/100));
+  inner.style.zoom=S.zoom;
+  $("#zl").textContent=Math.round(S.zoom*100)+"%";
+  save();
+}
+$("#zi").onclick=()=>setZoom(S.zoom+.1);
+$("#zo").onclick=()=>setZoom(S.zoom-.1);
+$("#zr").onclick=()=>setZoom(1);
+stage.addEventListener("wheel",ev=>{if(ev.ctrlKey){ev.preventDefault();setZoom(S.zoom+(ev.deltaY<0?.08:-.08));}},{passive:false});
+function setTheme(t){
+  DB.theme=t==="light"?"light":"dark";document.documentElement.setAttribute("data-theme",DB.theme);
+  $("#theme").textContent=DB.theme==="light"?"☀️":"🌙";
+  $("#theme").title=DB.theme==="light"?"Cambiar a tema oscuro":"Cambiar a tema claro";
+  save();
+}
+$("#theme").onclick=()=>setTheme(DB.theme==="light"?"dark":"light");
+$("#sideBtn").onclick=()=>{document.body.classList.toggle("noside");$("#sideBtn").classList.toggle("on",!document.body.classList.contains("noside"));layout();};
+function layout(){
+  const t=$("#top").offsetHeight,w=$("#warn");
+  if(w)w.style.top=t+"px";
+  const wh=(w&&w.classList.contains("on"))?w.offsetHeight:0;
+  $("#msbar").style.top=(t+wh)+"px";
+  const top=t+wh+(ms?$("#msbar").offsetHeight:0);
+  stage.style.top=top+"px";$("#side").style.top=top+"px";
+}
+addEventListener("resize",()=>{layout();placePop();});
+stage.addEventListener("scroll",()=>{placePop();hideTip();},{passive:true});
+
+const lg=$("#legend");
+lg.innerHTML='<b>Estados ▾</b><div class="lgb">'+Object.entries(ST).filter(([k])=>k!=="bc")
+  .map(([k,v])=>`<div><span class="c s-${k}"></span>${k==="net"?"Red y broadcast":v.n}</div>`).join("")+'</div>';
+lg.querySelector("b").onclick=()=>{const b=lg.querySelector(".lgb"),off=b.style.display==="none";b.style.display=off?"":"none";lg.querySelector("b").textContent="Estados "+(off?"▾":"▸");};
+
+/* ---------- exportar ---------- */
+function dl(blob,name){
+  try{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download=name;a.style.display="none";
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},8000);
+    return true;
+  }catch(err){return false;}
+}
+// muestra el resultado para poder guardarlo a mano si el navegador bloquea la descarga
+function deliver(blob,name,kind,text){
+  dl(blob,name);
+  const url=URL.createObjectURL(blob);
+  modal.innerHTML=`<h3>${esc(name)}</h3>
+  <div class="body">
+    ${kind==="img"?`<img src="${url}" alt="" style="max-width:100%;border:1px solid var(--line2);border-radius:8px;background:#fff">`:""}
+    ${kind==="txt"?`<textarea id="sv_txt" spellcheck="false" style="min-height:190px;font-family:var(--m);font-size:11px;width:100%;background:var(--bg2);border:1.5px solid var(--line2);border-radius:8px;padding:8px"></textarea>`:""}
+    <div class="hint">Debería haberse descargado ya. Si no aparece nada (algunos navegadores bloquean las descargas cuando el HTML se abre desde una carpeta local), usa los botones de abajo${kind==="img"?" o haz clic derecho sobre la imagen y elige «Guardar imagen como…»":""}.</div>
+  </div>
+  <div class="foot">
+    ${kind==="txt"?'<button class="btn" id="sv_copy">Copiar todo</button>':""}
+    <button class="btn" id="sv_open">Abrir en pestaña nueva</button>
+    <button class="btn acc" id="sv_dl">Descargar otra vez</button>
+    <button class="btn" id="sv_close">Cerrar</button>
+  </div>`;
+  veil.classList.add("on");
+  if(kind==="txt")$("#sv_txt").value=text||"";
+  $("#sv_dl").onclick=()=>dl(blob,name);
+  $("#sv_open").onclick=()=>{const w=window.open(url,"_blank");if(!w)toast("El navegador ha bloqueado la ventana nueva");};
+  $("#sv_close").onclick=()=>{URL.revokeObjectURL(url);closeModal();};
+  const cp=$("#sv_copy");
+  if(cp)cp.onclick=()=>{const t=$("#sv_txt");t.select();
+    try{document.execCommand("copy");toast("Copiado al portapapeles");}catch(err){toast("Selecciona el texto y copia con Ctrl+C");}};
+}
+const stamp=()=>new Date().toISOString().slice(0,10);
+const slug=t=>String(t||"sede").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"sede";
+let expScope="site";
+const scopeSites=()=>expScope==="all"?DB.sites:[site()];
+const scopeName=()=>expScope==="all"?"todas-las-sedes":slug(site().name);
+// filas de una subred: IPs con datos y la puerta de enlace
+function hostRows(st,s){
+  const keys=Object.keys(s.hosts);
+  if(s.gw&&!s.hosts[s.gw])keys.push(s.gw);
+  return keys.map(ip=>({ip,n:ip2n(ip)})).sort((a,b)=>a.n-b.n).map(({ip})=>{
+    const h=s.hosts[ip]||{st:"",name:"",type:"",mac:"",note:""};
+    return {ip,est:ip===s.gw?"Puerta de enlace":ST[h.st].n,name:h.name,type:h.name?TYPES[h.type]||"":"",mac:h.mac,note:(h.note||"").replace(/\r?\n/g," ")};
+  });
+}
+function expCSV(){
+  const head=["Sede","VLAN","Nombre VLAN","Subred","IP","Estado","Equipo","Tipo","MAC","Nota"];
+  const rows=[];
+  scopeSites().forEach(si=>si.state.subnets.forEach(s=>{
+    const v=si.state.vlans.find(x=>x.id===s.vlan);
+    hostRows(si.state,s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.cidr,r.ip,r.est,r.name,r.type,r.mac,r.note]));
+  }));
+  const qq=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const txt="\uFEFF"+[head,...rows].map(r=>r.map(qq).join(";")).join("\r\n");
+  deliver(new Blob([txt],{type:"text/csv;charset=utf-8"}),"ips-"+scopeName()+"-"+stamp()+".csv","txt",txt);
+}
+function expJSON(){
+  save();
+  const j=JSON.stringify(DB,null,2);
+  deliver(new Blob([j],{type:"application/json"}),"subnetscope-"+stamp()+".json","txt",j);
+}
+/* --- dibujo de las cuadriculas en un canvas (fondo claro, para imprimir) --- */
+const CK={libre:["#f1f5f9","#cbd5e1"],asig:["#bfdbfe","#2563eb"],resv:["#fde68a","#b45309"],dhcp:["#ede9fe","#9333ea"],
+          gw:["#bbf7d0","#15803d"],net:["#cbd5e1","#64748b"],bc:["#cbd5e1","#64748b"]};
+// bloques /24 que se dibujan: en subredes grandes solo los que tienen algo (como mucho 16)
+function drawBlocks(s){
+  const p=P(s);
+  if(p.len>=24)return [{lo:p.net,hi:p.bc}];
+  const out=[];let skip=0;
+  for(let b=0;b<p.size/256;b++){
+    const lo=p.net+b*256,hi=lo+255,st=stats(s,lo,hi);
+    if((s.open[b]||st.used||st.dh)&&out.length<16)out.push({lo,hi,b:true});else skip++;
+  }
+  if(!out.length){out.push({lo:p.net,hi:p.net+255,b:true});skip--;}
+  if(skip>0)out.push({skip});
+  return out;
+}
+function planCanvas(groups,maxPx){
+  const CS=22,GP=3,LW=46,PAD=28,W=760;
+  const ops=[];let y=PAD;
+  const T=(x,yy,t,size,col,w,al)=>ops.push(c=>{c.font=`${w||400} ${size}px "Segoe UI",Arial,sans-serif`;c.fillStyle=col;c.textAlign=al||"left";c.fillText(t,x,yy);});
+  const B=(x,yy,w,h,f,s)=>ops.push(c=>{c.fillStyle=f;c.fillRect(x,yy,w,h);if(s){c.strokeStyle=s;c.lineWidth=1;c.strokeRect(x+.5,yy+.5,w-1,h-1);}});
+  groups.forEach(gp=>{
+    if(gp.title){T(PAD,y+20,gp.title,20,"#0f172a",700);y+=38;}
+    gp.subnets.forEach(s=>{
+      const v=gp.vlans.find(x=>x.id===s.vlan),p=P(s),st=stats(s),f=cellFn(s);
+      B(PAD,y,6,38,v?v.color:"#94a3b8");
+      T(PAD+14,y+15,`${s.cidr}   ${v?"VLAN "+v.vid+" · "+v.name:"sin VLAN"}${s.name?"   —   "+s.name:""}`,14,"#0f172a",700);
+      T(PAD+14,y+33,`${counterText(st)} · quedan ${fmt(st.free)} libres · máscara ${maskOf(p.len)}${s.gw?" · enlace "+s.gw:""}${s.dhcpFrom?" · DHCP "+s.dhcpFrom+" – "+s.dhcpTo:""}`,11,"#475569");
+      y+=50;
+      drawBlocks(s).forEach(bk=>{
+        if(bk.skip){T(PAD,y+12,`… ${bk.skip} bloque(s) /24 sin uso que no se dibujan`,11,"#64748b");y+=22;return;}
+        if(p.len<24){const bs=stats(s,bk.lo,bk.hi);T(PAD,y+12,`${n2ip(bk.lo)}/24 · ${counterText(bs)} · quedan ${bs.free} libres`,11,"#334155",600);y+=20;}
+        const cols=Math.min(16,bk.hi-bk.lo+1);
+        for(let n=bk.lo;n<=bk.hi;n++){
+          const i=n-bk.lo,cl=i%cols,x=PAD+LW+cl*(CS+GP),yy=y+Math.floor(i/cols)*(CS+GP);
+          if(cl===0)T(PAD+LW-7,yy+CS/2+4,"."+(n&255),9,"#64748b",400,"right");
+          const cc=CK[f(n)];B(x,yy,CS,CS,cc[0],cc[1]);
+          T(x+CS/2,yy+CS/2+3.5,String(n&255),8.5,"#1e293b",600,"center");
+        }
+        y+=Math.ceil((bk.hi-bk.lo+1)/cols)*(CS+GP)+12;
+      });
+      y+=18;
+    });
+  });
+  let lx=PAD;
+  Object.entries(ST).filter(([k])=>k!=="bc").forEach(([k,v])=>{
+    B(lx,y,14,14,CK[k][0],CK[k][1]);const t=k==="net"?"Red y broadcast":v.n;T(lx+19,y+11,t,10.5,"#334155",600);lx+=34+t.length*6;
+  });
+  y+=14+PAD;
+  const sc=Math.max(.5,Math.min(2,Math.sqrt((maxPx||8e6)/(W*y))));
+  const c=document.createElement("canvas");
+  c.width=Math.round(W*sc);c.height=Math.round(y*sc);
+  const x=c.getContext("2d");
+  x.fillStyle="#ffffff";x.fillRect(0,0,c.width,c.height);
+  x.setTransform(sc,0,0,sc,0,0);
+  ops.forEach(o=>o(x));
+  c._w=W;
+  return c;
+}
+const groupsOf=sites=>sites.map(si=>({title:sites.length>1?si.name:"",subnets:si.state.subnets,vlans:si.state.vlans}));
+function withState(st,fn){const prev=S;S=st;try{return fn();}finally{S=prev;}}
+function expPNG(){
+  toast("Generando imagen…");
+  setTimeout(()=>{
+    try{
+      const c=planCanvas(groupsOf(scopeSites()));
+      c.toBlob(b=>{if(b)deliver(b,"plan-ip-"+scopeName()+"-"+stamp()+".png","img");else toast("Imagen demasiado grande");},"image/png");
+    }catch(err){toast("No se pudo generar la imagen");}
+  },40);
+}
+function expPDF(){
+  toast("Preparando documento…");
+  setTimeout(()=>{
+    const sites=scopeSites();
+    let h=`<h1>Plan de direccionamiento IP — ${expScope==="all"?sites.length+" sedes":esc(site().name)}</h1>
+      <div class="meta">Generado el ${new Date().toLocaleString("es-ES")} con SubnetScope · ${sites.reduce((a,x)=>a+x.state.vlans.length,0)} VLAN · ${sites.reduce((a,x)=>a+x.state.subnets.length,0)} subredes</div>`;
+    sites.forEach((si,k)=>{
+      const st=si.state;
+      withState(st,()=>{
+        h+=`<h2${k?' class="sub"':""}>${sites.length>1?"SEDE: "+esc(si.name)+" — ":""}VLAN</h2>
+        <table><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Subredes</th><th>IPs en uso</th></tr>
+        ${st.vlans.slice().sort((a,b)=>a.vid-b.vid).map(v=>{const ns=st.subnets.filter(s=>s.vlan===v.id);
+          return `<tr><td><span class="sw" style="background:${v.color}"></span>${v.vid}</td><td>${esc(v.name)}</td><td>${esc(v.desc)}</td>
+            <td>${ns.map(s=>s.cidr).join("<br>")||"—"}</td><td>${ns.reduce((a,s)=>a+stats(s).used,0)}</td></tr>`;}).join("")}</table>
+        <h2>Resumen de subredes</h2>
+        <table><tr><th>Subred</th><th>VLAN</th><th>Nombre</th><th>Máscara</th><th>Puerta de enlace</th><th>DNS</th><th>DHCP</th><th>Uso</th></tr>
+        ${st.subnets.map(s=>{const v=st.vlans.find(x=>x.id===s.vlan),sx=stats(s);
+          return `<tr><td>${s.cidr}</td><td>${v?v.vid+" · "+esc(v.name):"—"}</td><td>${esc(s.name)}</td><td>${maskOf(P(s).len)}</td><td>${esc(s.gw||"—")}</td>
+            <td>${esc(s.dns||"—")}</td><td>${s.dhcpFrom?esc(s.dhcpFrom+" – "+s.dhcpTo):"—"}</td><td>${counterText(sx)} · ${sx.free} libres</td></tr>`;}).join("")}</table>`;
+        st.subnets.forEach(s=>{
+          const v=st.vlans.find(x=>x.id===s.vlan),rows=hostRows(st,s);
+          const img=planCanvas([{title:"",subnets:[s],vlans:st.vlans}],3e6).toDataURL("image/png");
+          h+=`<div class="sub"><h2>${s.cidr} — ${v?"VLAN "+v.vid+" · "+esc(v.name):"sin VLAN"}${s.name?" — "+esc(s.name):""}</h2>
+            <img src="${img}" alt="">
+            <table><tr><th>IP</th><th>Estado</th><th>Equipo</th><th>Tipo</th><th>MAC</th><th>Nota</th></tr>
+            ${rows.map(r=>`<tr><td>${r.ip}</td><td>${r.est}</td><td>${esc(r.name)}</td><td>${esc(r.type)}</td><td>${esc(r.mac)}</td><td>${esc(r.note)}</td></tr>`).join("")||'<tr><td colspan="6">Sin IPs documentadas</td></tr>'}
+            </table></div>`;
+        });
+      });
+    });
+    $("#print").innerHTML=h;
+    setTimeout(()=>{window.print();toast("Elige \"Guardar como PDF\" en el diálogo");},400);
+  },40);
+}
+function setScope(v){
+  expScope=v==="all"?"all":"site";DB.expScope=expScope;
+  $$("#expScope button").forEach(b=>b.classList.toggle("on",b.dataset.scope===expScope));
+  save();
+}
+$("#expScope").addEventListener("click",ev=>{const b=ev.target.closest("[data-scope]");if(!b)return;ev.stopPropagation();setScope(b.dataset.scope);});
+const expMenu=$("#expMenu");
+function openExpMenu(){
+  expMenu.classList.add("on");
+  const r=$("#expBtn").getBoundingClientRect();
+  expMenu.style.top=(r.bottom+6)+"px";
+  expMenu.style.left=Math.max(8,Math.min(r.right-260,innerWidth-268))+"px";
+}
+$("#expBtn").onclick=ev=>{ev.stopPropagation();expMenu.classList.contains("on")?expMenu.classList.remove("on"):openExpMenu();};
+document.addEventListener("click",()=>expMenu.classList.remove("on"));
+expMenu.addEventListener("click",ev=>{
+  const b=ev.target.closest("[data-exp]");if(!b)return;
+  expMenu.classList.remove("on");
+  ({png:expPNG,pdf:expPDF,csv:expCSV,json:expJSON})[b.dataset.exp]();
+});
+
+/* ---------- importar ---------- */
+let impMode="any";
+$("#impJson").onclick=()=>{impMode="any";$("#file").click();};
+$("#rsImp").onclick=()=>{impMode="rack";$("#file").click();};
+$("#file").onchange=ev=>{const f=ev.target.files[0];ev.target.value="";if(f)importText(f);};
+addEventListener("dragover",ev=>{if(ev.dataTransfer&&ev.dataTransfer.types.includes("Files"))ev.preventDefault();});
+addEventListener("drop",ev=>{
+  const f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];
+  if(!f)return;ev.preventDefault();impMode="any";importText(f);
+});
+// salas de RackScope en cualquiera de sus formatos
+function rackRooms(d,fname){
+  if(d&&Array.isArray(d.rooms)&&d.rooms.some(r=>r&&r.state&&Array.isArray(r.state.racks)))return d.rooms.filter(r=>r&&r.state&&Array.isArray(r.state.racks));
+  if(Array.isArray(d)&&d.length&&d[0]&&d[0].state&&Array.isArray(d[0].state.racks))return d;
+  if(d&&Array.isArray(d.racks))return [{name:fname,state:d}];
+  if(d&&d.state&&Array.isArray(d.state.racks))return [d];
+  return null;
+}
+function importText(f){
+  const rd=new FileReader();
+  rd.onerror=()=>importError("No se ha podido leer el archivo “"+f.name+"”.");
+  rd.onload=()=>{
+    const txt=String(rd.result||"").replace(/^\uFEFF/,"").trim();
+    let d=null;
+    try{d=JSON.parse(txt);}
+    catch(err){return importError("El archivo “"+f.name+"” no es un JSON válido.\n\nEmpieza por: "+(txt.slice(0,60)||"(vacío)")+"\n\nError: "+err.message);}
+    const nombre=f.name.replace(/\.[a-z]+$/i,"");
+    const rooms=rackRooms(d,nombre);
+    if(rooms)return rackImport(f.name,rooms);
+    if(impMode==="rack")return importError("“"+f.name+"” no parece un JSON de RackScope (no encuentro salas ni racks).\n\nEn RackScope: Exportar › Copia de seguridad (JSON).");
+    let sites=null;
+    if(d&&Array.isArray(d.sites)&&d.sites.length)sites=d.sites;
+    else if(d&&d.state&&Array.isArray(d.state.subnets))sites=[d];
+    if(!sites)return importError("El archivo “"+f.name+"” es un JSON, pero no es una copia de SubnetScope ni un JSON de RackScope.");
+    sites.forEach(r=>{r.id=r.id||nid("s");r.name=r.name||nombre||"Sede";r.state=migrate(r.state);});
+    importDialog(f.name,sites,d);
+  };
+  rd.readAsText(f);
+}
+function importError(msg){
+  modal.innerHTML=`<h3>No se ha podido importar</h3>
+    <div class="body"><div class="hint" style="white-space:pre-wrap">${esc(msg)}</div></div>
+    <div class="foot"><button class="btn acc" id="m_ok">Cerrar</button></div>`;
+  veil.classList.add("on");$("#m_ok").onclick=closeModal;
+}
+function importDialog(nombre,sites,d){
+  const res=sites.map(r=>`<li><b>${esc(r.name)}</b> — ${r.state.vlans.length} VLAN · ${r.state.subnets.length} subredes · ${r.state.subnets.reduce((a,s)=>a+Object.keys(s.hosts).length,0)} IPs documentadas</li>`).join("");
+  modal.innerHTML=`<h3>Importar “${esc(nombre)}”</h3>
+  <div class="body">
+    <div class="hint">El archivo trae <b>${sites.length} sede(s)</b>:</div>
+    <ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7">${res}</ul>
+    <div class="hint">Ahora mismo tienes ${DB.sites.length} sede(s). Elige qué hacer.</div>
+  </div>
+  <div class="foot">
+    <button class="btn" id="i_cancel">Cancelar</button><span style="flex:1"></span>
+    <button class="btn" id="i_add">Añadir a lo que tengo</button>
+    <button class="btn acc" id="i_rep">Sustituir todo</button>
+  </div>`;
+  veil.classList.add("on");
+  $("#i_cancel").onclick=closeModal;
+  $("#i_add").onclick=()=>{
+    sites.forEach(r=>{r.id=nid("s");DB.sites.push(r);});
+    save();closeModal();useSite(sites[0].id);toast("Añadidas "+sites.length+" sede(s)");
+  };
+  $("#i_rep").onclick=()=>{
+    const snap=snapDB();
+    DB={v:1,sites,current:(d&&d.current&&sites.some(r=>r.id===d.current))?d.current:sites[0].id,
+        theme:DB.theme,expScope:DB.expScope};
+    save();closeModal();useSite(DB.current);toastUndo("Importadas "+sites.length+" sede(s).",snap);
+  };
+}
+// tipo de SubnetScope a partir del tipo y el nombre del equipo en RackScope
+function rackType(e){
+  const t=(e.name+" "+(e.sub||"")).toLowerCase();
+  if(/cctv|nvr|c[aá]mara|grabador|dvr/.test(t))return "camara";
+  if(/impresora|printer|multifunci/.test(t))return "impresora";
+  if(/\bap\b|wifi|punto de acceso|access point/.test(t))return "ap";
+  if(/\bvm\b|virtual machine|m[aá]quina virtual/.test(t))return "vm";
+  if(e.type==="switch")return "switch";
+  if(e.type==="server"||e.type==="nas")return "servidor";
+  if(/\bpc\b|puesto|sobremesa|port[aá]til/.test(t))return "pc";
+  return "otro";
+}
+function rackItems(rooms){
+  const out=[];
+  rooms.forEach(r=>(r.state.racks||[]).forEach(rk=>(rk.elements||[]).forEach(e=>{
+    if(!e||e.type==="panel"||e.type==="hueco")return;           // los paneles y huecos no llevan IP
+    let ip=null,host=null;
+    String(e.sub||"").split(/[·|,;]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>{
+      const m=/(\d{1,3}(?:\.\d{1,3}){3})/.exec(x);
+      if(m&&ip==null&&ip2n(m[1])!=null){ip=n2ip(ip2n(m[1]));return;}
+      if(!host&&/^[a-z0-9][\w.-]*$/i.test(x)&&/[a-z]/i.test(x)&&!/^\d+\s*(p|u|va|w)\b/i.test(x))host=x;
+    });
+    out.push({id:nid("i"),name:host||String(e.name||"SIN NOMBRE"),type:rackType(e),ip,
+      note:(host?e.name+" · ":"")+(r.name||"Sala")+" › "+(rk.name||"Rack")});
+  })));
+  return out;
+}
+function rackImport(nombre,rooms){
+  const items=rackItems(rooms);
+  if(!items.length)return importError("“"+nombre+"” es de RackScope, pero no tiene equipos con IP posible (solo paneles de parcheo o huecos).");
+  const known=n=>findHost(h=>h.name.toLowerCase()===n.toLowerCase())||S.inventory.some(i=>i.name.toLowerCase()===n.toLowerCase());
+  const nuevos=items.filter(i=>!known(i.name)),dup=items.length-nuevos.length;
+  const conIp=nuevos.filter(i=>{if(!i.ip)return false;const n=ip2n(i.ip),s=subnetOfIp(n);return s&&!s.hosts[i.ip]&&["libre","dhcp","gw"].includes(cellFn(s)(n));});
+  modal.innerHTML=`<h3>Equipos de RackScope</h3>
+  <div class="body">
+    <div class="hint">“${esc(nombre)}” trae <b>${items.length} equipos</b> en ${rooms.length} sala(s) (sin contar paneles de parcheo ni huecos).
+      ${dup?`<br><b>${dup}</b> ya están en esta sede con el mismo nombre y no se tocan.`:""}</div>
+    ${conIp.length?`<label class="chk"><input type="checkbox" id="r_auto" checked> Asignar ya la IP a los <b>${conIp.length}</b> que la traen escrita en RackScope y caen en una subred de “${esc(site().name)}”</label>`:""}
+    <div class="hint">El resto pasa a la lista <b>Equipos sin IP</b> del panel izquierdo, desde donde les das IP con un clic.</div>
+    <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;max-height:180px;overflow:auto">${nuevos.map(i=>`<li><b>${esc(i.name)}</b> · ${TYPES[i.type]}${i.ip?" · "+i.ip:""}</li>`).join("")}</ul>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok"${nuevos.length?"":" disabled"}>Importar a “${esc(site().name)}”</button></div>`;
+  veil.classList.add("on");
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const auto=$("#r_auto")&&$("#r_auto").checked;
+    let a=0;
+    nuevos.forEach(i=>{
+      if(auto&&conIp.includes(i)){
+        const s=subnetOfIp(ip2n(i.ip));
+        s.hosts[i.ip]={st:"asig",name:i.name,type:i.type,mac:"",note:"De RackScope: "+i.note};a++;
+      }else S.inventory.push(i);
+    });
+    if(nuevos.length-a){document.body.classList.remove("noside");$("#sideBtn").classList.add("on");layout();}
+    save();closeModal();render();
+    toast(`${a} con IP asignada · ${nuevos.length-a} a la lista de equipos sin IP`);
+  };
+}
+
+$("#reset").onclick=()=>{
+  if(!confirm('Se borra el contenido de la sede "'+site().name+'" y vuelve la red de ejemplo. Las demás sedes no se tocan. ¿Seguro?'))return;
+  const snap=snapDB();
+  site().state=migrate(seed());S=site().state;
+  save();useSite(DB.current);
+  toastUndo("Sede reiniciada.",snap);
+};
+
+/* ---------- sedes ---------- */
+function fillSites(){
+  $("#site").innerHTML=DB.sites.map(r=>`<option value="${r.id}"${r.id===DB.current?" selected":""}>${esc(r.name)}</option>`).join("");
+}
+$("#site").onchange=ev=>useSite(ev.target.value);
+$("#siteAdd").onclick=()=>{
+  modal.innerHTML=`<h3>Nueva sede o red</h3>
+  <div class="body">
+    <div class="fld"><label>Nombre</label><input id="s_name" placeholder="Oficina central, Almacén, Laboratorio…" value="Sede ${DB.sites.length+1}"></div>
+    <div class="fld"><label>Empezar</label><select id="s_base">
+      <option value="empty">En blanco — voy documentando desde cero</option>
+      <option value="copy">Copiando la sede actual (${esc(site().name)})</option>
+      <option value="seed">Con la red de ejemplo</option>
+    </select></div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Crear</button></div>`;
+  veil.classList.add("on");
+  setTimeout(()=>{$("#s_name").focus();$("#s_name").select();},40);
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const nm=$("#s_name").value.trim()||("Sede "+(DB.sites.length+1));
+    const base=$("#s_base").value;
+    const st=base==="copy"?JSON.parse(JSON.stringify(S)):base==="seed"?seed():blankState();
+    const r=newSite(nm,st);
+    DB.sites.push(r);save();closeModal();useSite(r.id);
+    toast('Sede "'+nm+'" creada');
+  };
+  modal.onkeydown=ev=>{if(ev.key==="Enter")$("#m_ok").click();};
+};
+$("#siteEdit").onclick=()=>{
+  const r=site();
+  modal.innerHTML=`<h3>Sede</h3>
+  <div class="body">
+    <div class="fld"><label>Nombre</label><input id="s_name" value="${esc(r.name)}"></div>
+    <div class="hint">${r.state.vlans.length} VLAN · ${r.state.subnets.length} subredes · ${r.state.subnets.reduce((a,s)=>a+Object.keys(s.hosts).length,0)} IPs documentadas</div>
+  </div>
+  <div class="foot">
+    <button class="btn danger" id="s_del">Eliminar sede</button>
+    <button class="btn" id="s_dup">Duplicar</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button>
+  </div>`;
+  veil.classList.add("on");
+  setTimeout(()=>$("#s_name").focus(),40);
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{r.name=$("#s_name").value.trim()||r.name;save();fillSites();closeModal();};
+  $("#s_dup").onclick=()=>{
+    const c=newSite(r.name+" (copia)",JSON.parse(JSON.stringify(r.state)));
+    DB.sites.push(c);save();closeModal();useSite(c.id);toast("Sede duplicada");
+  };
+  $("#s_del").onclick=()=>{
+    if(DB.sites.length<2){toast("Debe quedar al menos una sede");return;}
+    if(!confirm('¿Eliminar la sede "'+r.name+'" con sus '+r.state.subnets.length+' subredes?\n\nTendrás 30 segundos para deshacerlo.'))return;
+    const snap=snapDB();
+    DB.sites=DB.sites.filter(x=>x.id!==r.id);
+    DB.current=DB.sites[0].id;S=DB.sites[0].state;
+    save();closeModal();useSite(DB.current);
+    toastUndo('Sede "'+r.name+'" eliminada.',snap);
+  };
+};
+
+/* ---------- demostracion guiada ---------- */
+const glow=(sel,on)=>{const n=$(sel);if(n)n.classList.toggle("glow",on);};
+const unglow=()=>$$(".glow").forEach(n=>n.classList.remove("glow"));
+let tourBack=null;
+const tNet=i=>S.subnets[i]||S.subnets[0];
+const TOUR=[
+ {t:"<b>SubnetScope</b> — el plan de IPs y VLANs de tu red en un solo archivo HTML",
+  f:()=>{setMS(false);clearSearch();closePop();stage.scrollTop=0;stage.scrollLeft=0;
+     if(document.body.classList.contains("noside")){document.body.classList.remove("noside");layout();}}},
+ {t:"Cada <b>VLAN</b> con su ID, nombre y color; cada subred, colgada de su VLAN",
+  f:()=>{glow("#secV",true);}},
+ {t:"Una casilla por IP: libre, asignada, reservada, DHCP, puerta de enlace, red y broadcast",
+  f:()=>{unglow();glow("#legend",true);}},
+ {t:"<b>Clic en una casilla</b>: equipo, tipo, MAC y nota. Asignar, reservar o liberar",
+  f:()=>{unglow();const s=tNet(0),n=ip2n("192.168.10.20");const c=reveal(s,n)||cellNode(s.id,P(s).net+1);
+     if(c){c.scrollIntoView({block:"center"});openCell(s.id,+c.dataset.n,c,false);}}},
+ {t:"Contador por subred y botón <b>Siguiente IP libre</b>: te lleva directo a ella",
+  f:()=>{closePop();const s=tNet(0),n=nextFree(s);if(n!=null)goTo(s.id,n,true);}},
+ {t:"Las redes mayores de /24 se parten en <b>bloques /24 plegables</b>",
+  f:()=>{closePop();const s=S.subnets.find(x=>P(x).len<24);if(!s)return;
+     if(!s.open[1]){s.open[1]=true;tourBack.opened=s.id;render();}
+     const nn=netsEl.querySelector(`.net[data-s="${s.id}"]`);if(nn)nn.scrollIntoView({block:"start"});}},
+ {t:"<b>Buscador</b> por IP, nombre de equipo o MAC: resalta la casilla al momento",
+  f:()=>{search.value="nas";runSearch();const x=sresList[0];if(x)setTimeout(()=>goTo(x.s.id,x.n,false),300);}},
+ {t:"<b>Selección múltiple</b> para reservar o liberar rangos enteros de golpe",
+  f:()=>{clearSearch();setMS(true);const s=tNet(0),a=ip2n("192.168.10.100");
+     if(!P(s)||a<P(s).net||a>P(s).bc)return;rangeKeys(s.id,a,a+15).forEach(k=>sel.add(k));markSel();
+     const c=cellNode(s.id,a);if(c)c.scrollIntoView({block:"center"});}},
+ {t:"Importa los equipos de <b>RackScope</b> y dales IP sin teclearlos otra vez",
+  f:()=>{setMS(false);glow("#secI",true);stage.scrollTop=0;}},
+ {t:"Y el plan sale en <b>CSV, PDF, PNG o JSON</b>",
+  f:()=>{unglow();openExpMenu();}},
+ {t:"Tema claro y oscuro, varias sedes y todo guardado en tu equipo",
+  f:()=>{expMenu.classList.remove("on");setTheme("light");}},
+ {t:"<b>SubnetScope</b> · hermana de RackScope · gratis y con el código a la vista",
+  f:()=>{setTheme(tourBack.theme);stage.scrollTop=0;closePop();}}
+];
+let tourI=-1,tourT=null;
+function tourStep(i){
+  tourI=i;
+  const st=TOUR[i];if(!st)return tourStop();
+  $("#capT").innerHTML=st.t;$("#cap").classList.add("on");
+  try{st.f();}catch(e){}
+}
+function tourPlay(){
+  tourBack={theme:DB.theme,opened:null,noside:document.body.classList.contains("noside")};
+  $("#tour").classList.add("on");
+  const next=()=>{
+    if(tourI+1>=TOUR.length)return tourStop();
+    tourStep(tourI+1);
+    tourT=setTimeout(next,2600);
+  };
+  tourI=-1;next();
+}
+function tourStop(){
+  clearTimeout(tourT);tourT=null;tourI=-1;
+  $("#cap").classList.remove("on");$("#tour").classList.remove("on");
+  unglow();expMenu.classList.remove("on");setMS(false);closePop();clearSearch();
+  if(tourBack){
+    const s=tourBack.opened&&subById(tourBack.opened);if(s){delete s.open[1];save();}
+    if(DB.theme!==tourBack.theme)setTheme(tourBack.theme);
+    if(tourBack.noside)document.body.classList.add("noside");
+    tourBack=null;
+  }
+  render();layout();
+}
+$("#tour").onclick=()=>{tourT?tourStop():tourPlay();};
+$("#capX").onclick=tourStop;
+
+$("#linkFile").onclick=()=>{
+  if(fileHandle){
+    modal.innerHTML=`<h3>Archivo vinculado</h3>
+    <div class="body"><div class="hint">Se guarda solo en <b>${esc(fileName)}</b> cada vez que cambias algo.</div></div>
+    <div class="foot"><button class="btn" id="f_open">Abrir otro archivo…</button>
+      <button class="btn" id="f_new">Vincular archivo nuevo…</button>
+      <button class="btn acc" id="m_ok">Cerrar</button></div>`;
+    veil.classList.add("on");
+    $("#m_ok").onclick=closeModal;
+  }else{
+    modal.innerHTML=`<h3>Guardar en un archivo</h3>
+    <div class="body">
+      <div class="hint">Ahora mismo los datos viven <b>solo en este navegador</b>, atados a la carpeta donde está el HTML. Si descargas otra copia del programa en otra ruta, o cambias de equipo o de navegador, ese trabajo no viaja contigo.<br><br>
+      Si vinculas un archivo, la aplicación lo reescribe sola cada vez que cambias algo. Ese archivo es tuyo: lo copias, lo guardas en red o en una nube y lo vuelves a abrir desde cualquier copia del programa.</div>
+    </div>
+    <div class="foot"><button class="btn" id="f_open">Abrir uno que ya tenga…</button>
+      <button class="btn" id="m_cancel">Ahora no</button>
+      <button class="btn acc" id="f_new">Elegir archivo…</button></div>`;
+    veil.classList.add("on");
+    $("#m_cancel").onclick=closeModal;
+  }
+  $("#f_new").onclick=()=>{closeModal();linkFile();};
+  $("#f_open").onclick=()=>{closeModal();openFile();};
+};
+document.addEventListener("click",ev=>{
+  const b=ev.target.closest("#warnLink,#warnExp");if(!b)return;
+  if(b.id==="warnLink")linkFile();else expJSON();
+});
+addEventListener("beforeunload",ev=>{if(!lsOK&&!fileHandle){ev.preventDefault();ev.returnValue="";}});
+
+DB=load();
+S=site().state;
+setScope(DB.expScope);
+if(innerWidth<900)document.body.classList.add("noside");
+$("#sideBtn").classList.toggle("on",!document.body.classList.contains("noside"));
+fillSites();
+setTheme(DB.theme);
+setZoom(S.zoom||1);
+render();
+try{localStorage.setItem(KEY+".test","1");localStorage.removeItem(KEY+".test");}catch(e){lsOK=false;}
+updateSaveUI();
+restoreHandle();
+</script>
+</body>
+</html>
