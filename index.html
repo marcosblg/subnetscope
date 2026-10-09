@@ -186,7 +186,8 @@ body.ms #msbar{display:flex}
 #pop{position:fixed;z-index:200;width:340px;background:var(--panel);border:2px solid var(--acc);border-radius:12px;box-shadow:var(--sh);display:none;overflow:hidden}
 #pop.on{display:block;animation:pin .12s ease-out}
 @keyframes pin{from{opacity:0;transform:translateY(-6px)}}
-#pop .ph{padding:10px 12px;background:var(--panel2);border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px}
+#pop .ph{padding:10px 12px;background:var(--panel2);border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:8px;cursor:move;user-select:none;touch-action:none}
+#pop .ph .grip{color:var(--tx3);font-size:12px;letter-spacing:-2px}
 #pop .ph .t{font-size:14px;font-weight:700;font-family:var(--m)}
 #pop .ph .p{font-size:10.5px;padding:3px 8px;border-radius:5px;font-weight:700;border:1px solid}
 #pop .ph .x{margin-left:auto;background:none;border:0;color:var(--tx3);font-size:16px;line-height:1}
@@ -329,7 +330,7 @@ body.ms #msbar{display:flex}
 <div id="stage"><div id="inner"><div id="nets"></div></div></div>
 
 <div id="pop">
-  <div class="ph"><span class="t" id="popT"></span><span class="p" id="popP"></span><button class="x" id="popX">✕</button></div>
+  <div class="ph" title="Arrastra para mover la ventana"><span class="grip">⋮⋮</span><span class="t" id="popT"></span><span class="p" id="popP"></span><button class="x" id="popX">✕</button></div>
   <div class="pb" id="popB"></div>
   <div class="pf" id="popF"><button class="btn acc sm" id="popAs">Asignar</button><button class="btn sm" id="popRs">Reservar</button><span style="flex:1"></span><button class="btn sm danger" id="popFr">Liberar</button></div>
 </div>
@@ -738,9 +739,9 @@ function hideTip(){tip.classList.remove("on");}
 
 /* ---------- ficha de una IP ---------- */
 const pop=$("#pop");
-let openC=null,openNode=null;
+let openC=null,openNode=null,popMoved=false,popDrag=null;
 function placePop(){
-  if(!openNode||!pop.classList.contains("on"))return;
+  if(!openNode||!pop.classList.contains("on")||popMoved)return;
   const r=openNode.getBoundingClientRect();
   let x=r.right+12,y=r.top-8;
   if(x+340>innerWidth)x=r.left-342;
@@ -748,7 +749,7 @@ function placePop(){
   y=Math.max(58,Math.min(y,innerHeight-Math.min(pop.offsetHeight,520)-12));
   pop.style.left=x+"px";pop.style.top=y+"px";
 }
-function closePop(){pop.classList.remove("on");openNode=null;openC=null;$$(".c.sel").forEach(p=>p.classList.remove("sel"));hideTip();}
+function closePop(){pop.classList.remove("on");popMoved=false;openNode=null;openC=null;$$(".c.sel").forEach(p=>p.classList.remove("sel"));hideTip();}
 function openCell(sid,n,node,focus){
   const s=subById(sid);if(!s||!node)return;
   $$(".c.sel").forEach(x=>x.classList.remove("sel"));
@@ -820,6 +821,22 @@ $("#popAs").onclick=()=>commitCell("asig");
 $("#popRs").onclick=()=>commitCell("resv");
 $("#popFr").onclick=releaseCell;
 $("#popX").onclick=closePop;
+// la ficha se arrastra por la cabecera y se queda donde la dejes hasta cerrarla
+const popH=pop.querySelector(".ph");
+popH.addEventListener("pointerdown",ev=>{
+  if(ev.button!==0||ev.target.closest("button"))return;
+  ev.preventDefault();
+  const r=pop.getBoundingClientRect();
+  popDrag={dx:ev.clientX-r.left,dy:ev.clientY-r.top};
+  popH.setPointerCapture(ev.pointerId);
+});
+popH.addEventListener("pointermove",ev=>{
+  if(!popDrag)return;
+  pop.style.left=Math.max(84-pop.offsetWidth,Math.min(innerWidth-80,ev.clientX-popDrag.dx))+"px";
+  pop.style.top=Math.max(4,Math.min(innerHeight-40,ev.clientY-popDrag.dy))+"px";
+  popMoved=true;
+});
+popH.addEventListener("pointerup",()=>{popDrag=null;});
 pop.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.tagName==="INPUT"){ev.preventDefault();commitCell("asig");}});
 
 // historial por IP de la sede (sobrevive a liberar la IP o a dividir la subred)

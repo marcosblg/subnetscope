@@ -14,6 +14,10 @@ Es la herramienta hermana de **[RackScope](https://github.com/marcosblg/rackscop
 
 No hay que instalar ni descargar nada: el enlace abre la herramienta con una oficina de ejemplo. Pulsa **▶ Ver demo** para la visita guiada.
 
+![Demostración de SubnetScope](docs/demo.gif)
+
+🎬 **[Ver el vídeo de demostración (30 s)](docs/demo.mp4)** · o pulsa **▶ Ver demo** dentro de la propia aplicación para recorrerla tú mismo.
+
 ## Qué hace
 
 **VLANs y subredes**
@@ -28,6 +32,7 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - Las subredes mayores de /24 se parten en **bloques /24 plegables**, cada uno con su recuento y su barra de uso.
 - **Clic en una casilla** y se abre su ficha: nombre del equipo, tipo (servidor, switch, impresora, PC, cámara, AP, VM u otro), MAC y nota, con botones para asignar, reservar o liberar.
 - Al pasar el ratón por encima ya sale un aviso rápido con la IP y el equipo.
+- La ficha se arrastra por su cabecera si tapa la casilla que quieres ver.
 - Avisa si repites una MAC o un nombre de equipo en otra IP.
 - **Historial por IP**: quién la tuvo, cuándo se asignó, se reservó o se liberó.
 
@@ -59,6 +64,8 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 3. Viene con una oficina de ejemplo (VLANs de servidores, usuarios, voz e invitados) para trastear. Cuando quieras empezar en serio: **＋** en el desplegable de sedes → *en blanco*.
 4. Crea las VLAN con **＋ VLAN** y las subredes con **＋ Subred** en el panel de la izquierda.
 5. Pulsa **💾 Archivo** y elige un `.json` tuyo: a partir de ahí la aplicación lo reescribe sola cada vez que cambias algo.
+
+![Ficha de una IP](docs/captura.jpg)
 
 ## Dónde se guardan los datos
 

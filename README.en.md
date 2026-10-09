@@ -14,6 +14,10 @@ It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**
 
 Nothing to install or download: the link opens the tool with a sample office. Hit **▶ Ver demo** for the guided tour.
 
+![SubnetScope demo](docs/demo.gif)
+
+🎬 **[Watch the demo video (30 s)](docs/demo.mp4)** · or hit **▶ Ver demo** inside the app to walk through it yourself.
+
 ## What it does
 
 **VLANs and subnets**
@@ -28,6 +32,7 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 - Subnets larger than /24 are split into **collapsible /24 blocks**, each with its own count and usage bar.
 - **Click a cell** to open its card: device name, type (server, switch, printer, PC, camera, AP, VM or other), MAC and note, with buttons to assign, reserve or release.
 - Hovering already pops up a quick hint with the IP and the device.
+- The card can be dragged by its header if it covers the cell you want to see.
 - Warns when a MAC or a device name is already used on another IP.
 - **Per-IP history**: who had it and when it was assigned, reserved or released.
 
