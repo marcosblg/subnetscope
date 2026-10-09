@@ -195,6 +195,10 @@ body.ms #msbar{display:flex}
 #pop .pf{padding:9px 12px;border-top:1px solid var(--line2);background:var(--panel2);display:flex;gap:6px}
 .empty{font-size:12.5px;color:var(--tx2);text-align:center;padding:12px 6px;line-height:1.6}
 .ctx{font-size:11px;color:var(--tx3);font-family:var(--m)}
+.hist{font-size:11px;color:var(--tx2);border-top:1px solid var(--line);padding-top:8px}
+.hist label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:4px;font-weight:700}
+.hist div{padding:2px 0;font-family:var(--m);font-size:10.5px}
+.hist span{color:var(--tx3)}
 .note{font-size:11.5px;color:var(--tx2);line-height:1.45;border-left:3px solid var(--warn);padding-left:8px}
 
 /* ---------- modal ---------- */
@@ -294,6 +298,7 @@ body.ms #msbar{display:flex}
       <button data-exp="png">🖼 Imagen PNG<small>Las cuadrículas de todas las subredes</small></button>
       <button data-exp="pdf">📄 PDF / Imprimir<small>Plan por subred + tabla de VLANs (elige "Guardar como PDF")</small></button>
       <button data-exp="csv">📊 Excel (CSV)<small>Todas las IPs asignadas y reservadas</small></button>
+      <button data-exp="rack">🔁 Pasar las IPs a RackScope<small>Escribe las IPs en un JSON de RackScope que elijas</small></button>
       <hr>
       <button data-exp="json">💾 Copia de seguridad (JSON)<small>Para volver a importarlo aquí</small></button>
     </div>
@@ -432,12 +437,12 @@ function seed(){
   R(nV,"192.168.30.121","192.168.30.126","Videoconferencia (previsto)");
   A(nI,"192.168.40.2","portal-cautivo","servidor","Portal de acceso de invitados",false);
   R(nI,"192.168.40.251","192.168.40.254","Reservadas para el proveedor wifi");
-  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[]};
+  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[]};
 }
 
 /* ---------- estado ---------- */
 let DB=null,S=null;
-const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[]});
+const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[]});
 function newSite(name,st){return {id:nid("s"),name:name||"Oficina de ejemplo",state:migrate(st||seed())};}
 function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
 function migrate(d){
@@ -461,6 +466,7 @@ function migrate(d){
       h.st=h.st==="resv"?"resv":"asig";h.name=h.name||"";h.type=TYPES[h.type]?h.type:"otro";h.mac=h.mac||"";h.note=h.note||"";
     });
   });
+  d.log=Array.isArray(d.log)?d.log.filter(l=>l&&l.ip):[];
   d.inventory.forEach(i=>{i.id=i.id||nid("i");i.name=i.name||"SIN NOMBRE";i.type=TYPES[i.type]?i.type:"otro";i.note=i.note||"";});
   return d;
 }
@@ -652,6 +658,7 @@ function netNode(s,i){
       <span style="flex:1"></span>
       <button class="btn sm acc" data-act="next" title="Ir a la primera IP libre de esta subred">⇢ Siguiente IP libre</button>
       <span class="tools">
+        <button class="btn sm" data-act="split" title="Dividir en subredes más pequeñas (calculadora)">⇲</button>
         <button class="btn sm" data-act="edit" title="Editar subred">✎</button>
         <button class="btn sm" data-act="up" ${i===0?"disabled":""} title="Subir">▲</button>
         <button class="btn sm" data-act="down" ${i===S.subnets.length-1?"disabled":""} title="Bajar">▼</button>
@@ -766,7 +773,7 @@ function openCell(sid,n,node,focus){
         <div class="fld"><label>Tipo</label><select id="p_type">${Object.entries(TYPES).map(([a,b])=>`<option value="${a}"${x.type===a?" selected":""}>${b}</option>`).join("")}</select></div>
         <div class="fld"><label>MAC</label><input id="p_mac" class="mono" value="${esc(x.mac)}" placeholder="00:11:22:33:44:55"></div>
       </div>
-      <div class="fld"><label>Nota</label><textarea id="p_note" placeholder="Ubicación, servicio, responsable…">${esc(x.note)}</textarea></div>`;
+      <div class="fld"><label>Nota</label><textarea id="p_note" placeholder="Ubicación, servicio, responsable…">${esc(x.note)}</textarea></div>`+histHTML(ip);
     $("#popF").style.display="";
     $("#popAs").textContent=h&&h.st==="asig"?"Guardar":"Asignar";
     $("#popRs").textContent=h&&h.st==="resv"?"Guardar reserva":"Reservar";
@@ -791,6 +798,8 @@ function commitCell(st){
     if(d&&!confirm(`La MAC ${mac} ya está en ${d.ip} (${d.h.name||"sin nombre"}). ¿Guardar igualmente?`))return;}
   if(st==="asig"){const d=findHost(h=>h.st==="asig"&&h.name.toLowerCase()===name.toLowerCase(),s,ip);
     if(d&&!confirm(`"${name}" ya tiene la IP ${d.ip}. ¿Darle también ${ip}?`))return;}
+  const prev=s.hosts[ip];
+  logIp(ip,st==="asig"?(prev&&prev.st==="asig"?(prev.name===name?"modificada":"reasignada"):"asignada"):(prev&&prev.st==="resv"?"reserva modificada":"reservada"),{name,mac});
   s.hosts[ip]={st,name,type,mac,note};
   if(name){const i=S.inventory.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i>=0)S.inventory.splice(i,1);}
   save();closePop();render();
@@ -802,6 +811,7 @@ function releaseCell(){
   const s=subById(openC.sid),ip=n2ip(openC.n);
   if(!s.hosts[ip])return;
   const snap=snapDB();
+  logIp(ip,"liberada",s.hosts[ip]);
   delete s.hosts[ip];
   save();closePop();render();
   toastUndo(ip+" liberada.",snap);
@@ -812,6 +822,17 @@ $("#popFr").onclick=releaseCell;
 $("#popX").onclick=closePop;
 pop.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.tagName==="INPUT"){ev.preventDefault();commitCell("asig");}});
 
+// historial por IP de la sede (sobrevive a liberar la IP o a dividir la subred)
+function logIp(ip,act,h){
+  S.log.push({t:Date.now(),ip,act,name:(h&&h.name)||"",mac:(h&&h.mac)||""});
+  if(S.log.length>3000)S.log.splice(0,S.log.length-3000);
+}
+function histHTML(ip){
+  const l=S.log.filter(x=>x.ip===ip).slice(-8).reverse();
+  if(!l.length)return "";
+  const f=t=>new Date(t).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  return `<div class="hist"><label>Historial</label>${l.map(x=>`<div><span>${f(x.t)}</span> · ${esc(x.act)}${x.name?" · "+esc(x.name):""}${x.mac?" <span>"+esc(x.mac)+"</span>":""}</div>`).join("")}</div>`;
+}
 function flash(c){c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");}
 // despliega lo necesario para que la IP este en pantalla
 function reveal(s,n){
@@ -863,6 +884,7 @@ function handleAct(btn){
     else goTo(s.id,n,true);
   }
   if(act==="edit")editSubnet(s);
+  if(act==="split")splitSubnet(s);
   if(act==="up"&&i>0){S.subnets.splice(i,1);S.subnets.splice(i-1,0,s);save();render();}
   if(act==="down"&&i<S.subnets.length-1){S.subnets.splice(i,1);S.subnets.splice(i+1,0,s);save();render();}
   if(act==="del"){
@@ -954,7 +976,7 @@ function msReserve(){
   $("#m_cancel").onclick=closeModal;
   $("#m_ok").onclick=()=>{
     const note=$("#r_note").value.trim();
-    ok.forEach(x=>{const h=x.s.hosts[x.ip];x.s.hosts[x.ip]={st:"resv",name:h?h.name:"",type:h?h.type:"otro",mac:h?h.mac:"",note:note||(h?h.note:"")};});
+    ok.forEach(x=>{const h=x.s.hosts[x.ip];logIp(x.ip,"reservada",h);x.s.hosts[x.ip]={st:"resv",name:h?h.name:"",type:h?h.type:"otro",mac:h?h.mac:"",note:note||(h?h.note:"")};});
     sel.clear();save();closeModal();render();toast(ok.length+" IPs reservadas");
   };
   modal.onkeydown=ev=>{if(ev.key==="Enter")$("#m_ok").click();};
@@ -965,7 +987,7 @@ function msFree(){
   const asg=items.filter(x=>x.s.hosts[x.ip].st==="asig");
   if(asg.length&&!confirm(`Se van a liberar ${items.length} IPs, de ellas ${asg.length} asignadas a equipos (${asg.slice(0,4).map(x=>x.s.hosts[x.ip].name).join(", ")}${asg.length>4?"…":""}). ¿Seguro?`))return;
   const snap=snapDB();
-  items.forEach(x=>delete x.s.hosts[x.ip]);
+  items.forEach(x=>{logIp(x.ip,"liberada",x.s.hosts[x.ip]);delete x.s.hosts[x.ip];});
   sel.clear();save();render();
   toastUndo(items.length+" IPs liberadas.",snap);
 }
@@ -1113,8 +1135,11 @@ function editSubnet(s){
   </div>
   <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button></div>`;
   veil.classList.add("on");
+  let gwTouched=!isNew||!!s.gw;                 // en subredes nuevas se propone la primera IP util
+  $("#n_gw").addEventListener("input",()=>gwTouched=true);
   const hint=()=>{
     const r=parseCIDR($("#n_cidr").value),h=$("#n_hint");
+    if(!gwTouched)$("#n_gw").value=r.err?"":n2ip(r.net+1);
     if(!$("#n_cidr").value.trim()){h.innerHTML="Escribe la dirección de red y el prefijo.";return;}
     if(r.err){h.innerHTML=`<span class="bad">${esc(r.err)}</span>${r.fix?` <button class="btn sm" id="n_fix">Usar ${r.fix}</button>`:""}`;return;}
     const ov=S.subnets.filter(x=>x.id!==s.id&&overlap(r,P(x)));
@@ -1161,6 +1186,59 @@ function editSubnet(s){
     toast("Subred "+r.cidr+" guardada");
   };
   modal.onkeydown=ev=>{if(ev.key==="Enter")$("#m_ok").click();};
+}
+
+// divide una subred en partes iguales; la vista previa sirve tambien de calculadora
+function splitSubnet(s){
+  const p=P(s);
+  if(p.len>=30){toast("Una /30 no se puede dividir más");return;}
+  const opts=[];for(let l=p.len+1;l<=Math.min(30,p.len+6);l++)opts.push(l);
+  modal.innerHTML=`<h3>Dividir ${s.cidr}</h3>
+  <div class="body">
+    <div class="fld"><label>Partir en</label><select id="x_len">${opts.map(l=>`<option value="${l}">${2**(l-p.len)} subredes /${l} · ${fmt(2**(32-l)-2)} IPs útiles cada una</option>`).join("")}</select></div>
+    <div id="x_prev" style="max-height:300px;overflow:auto"></div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cerrar</button><button class="btn acc" id="m_ok">Dividir</button></div>`;
+  veil.classList.add("on");
+  const plan=len=>{
+    const size=2**(32-len),out=[];
+    for(let net=p.net;net<p.bc;net+=size){
+      const bc=net+size-1;
+      const hosts=Object.keys(s.hosts).filter(ip=>{const n=ip2n(ip);return n>=net&&n<=bc;});
+      out.push({net,bc,len,cidr:n2ip(net)+"/"+len,hosts,lost:hosts.filter(ip=>{const n=ip2n(ip);return n===net||n===bc;})});
+    }
+    return out;
+  };
+  const lostOf=pl=>{
+    const l=[].concat(...pl.map(x=>x.lost)),g=ip2n(s.gw);
+    if(g!=null&&!s.hosts[s.gw]&&pl.some(x=>g===x.net||g===x.bc))l.push(s.gw+" (puerta de enlace)");
+    return l;
+  };
+  const prev=()=>{
+    const pl=plan(+$("#x_len").value),lost=lostOf(pl);
+    $("#x_prev").innerHTML=`<table style="width:100%;font-size:11.5px;font-family:var(--m);border-collapse:collapse">
+      <tr style="color:var(--tx3);text-align:left"><th>Subred</th><th>Rango útil</th><th>Broadcast</th><th>Con datos</th></tr>
+      ${pl.map(x=>`<tr><td>${x.cidr}</td><td>${n2ip(x.net+1)} – ${n2ip(x.bc-1)}</td><td>${n2ip(x.bc)}</td><td>${x.hosts.length}</td></tr>`).join("")}</table>
+      <div class="hint" style="margin-top:8px">Máscara <b>${maskOf(pl[0].len)}</b>. Cada parte conserva la VLAN, los DNS y el trozo del rango DHCP que le toque; la puerta de enlace se queda en la parte donde cae y el resto se quedan sin ella.</div>
+      ${lost.length?`<div class="hint bad" style="margin-top:6px">⚠ ${lost.length} IP(s) pasarían a ser red o broadcast y se perderían: ${esc(lost.slice(0,6).join(", "))}${lost.length>6?"…":""}</div>`:""}`;
+  };
+  $("#x_len").onchange=prev;prev();
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const pl=plan(+$("#x_len").value),lost=lostOf(pl);
+    if(lost.length&&!confirm(lost.length+" IP(s) con datos se perderán al dividir. ¿Seguir?"))return;
+    const snap=snapDB(),g=ip2n(s.gw),d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo);
+    const parts=pl.map((x,k)=>{
+      const n={id:nid("n"),cidr:x.cidr,name:s.name?s.name+" ("+(k+1)+"/"+pl.length+")":"",vlan:s.vlan,
+        gw:g!=null&&g>x.net&&g<x.bc?s.gw:"",dns:s.dns,dhcpFrom:"",dhcpTo:"",hosts:{},open:x.len<24?{0:true}:{},fold:false};
+      if(d0!=null&&d1!=null){const a=Math.max(d0,x.net+1),b=Math.min(d1,x.bc-1);if(a<=b){n.dhcpFrom=n2ip(a);n.dhcpTo=n2ip(b);}}
+      x.hosts.forEach(ip=>{if(!x.lost.includes(ip))n.hosts[ip]=s.hosts[ip];});
+      return n;
+    });
+    S.subnets.splice(S.subnets.indexOf(s),1,...parts);
+    closePop();save();closeModal();render();
+    toastUndo(s.cidr+" dividida en "+parts.length+" subredes.",snap);
+  };
 }
 
 /* ---------- panel lateral ---------- */
@@ -1213,6 +1291,7 @@ function giveIP(it){
     if(n==null){toast("No quedan IPs libres en esa subred");return;}
     const ip=n2ip(n);
     s.hosts[ip]={st:"asig",name:it.name,type:it.type,mac:"",note:it.note||""};
+    logIp(ip,"asignada",it);
     S.inventory=S.inventory.filter(x=>x!==it);
     save();closeModal();render();goTo(s.id,n,false);
     toast(`${ip} asignada a ${it.name}`);
@@ -1251,7 +1330,8 @@ stage.addEventListener("scroll",()=>{placePop();hideTip();},{passive:true});
 
 const lg=$("#legend");
 lg.innerHTML='<b>Estados ▾</b><div class="lgb">'+Object.entries(ST).filter(([k])=>k!=="bc")
-  .map(([k,v])=>`<div><span class="c s-${k}"></span>${k==="net"?"Red y broadcast":v.n}</div>`).join("")+'</div>';
+  .map(([k,v])=>`<div><span class="c s-${k}"></span>${k==="net"?"Red y broadcast":v.n}</div>`).join("")+
+  '<div title="El punto indica que hay un equipo apuntado en la puerta de enlace"><span class="c s-gw has"></span>Enlace con equipo</div></div>';
 lg.querySelector("b").onclick=()=>{const b=lg.querySelector(".lgb"),off=b.style.display==="none";b.style.display=off?"":"none";lg.querySelector("b").textContent="Estados "+(off?"▾":"▸");};
 
 /* ---------- exportar ---------- */
@@ -1355,7 +1435,8 @@ function planCanvas(groups,maxPx){
         for(let n=bk.lo;n<=bk.hi;n++){
           const i=n-bk.lo,cl=i%cols,x=PAD+LW+cl*(CS+GP),yy=y+Math.floor(i/cols)*(CS+GP);
           if(cl===0)T(PAD+LW-7,yy+CS/2+4,"."+(n&255),9,"#64748b",400,"right");
-          const cc=CK[f(n)];B(x,yy,CS,CS,cc[0],cc[1]);
+          const k=f(n),cc=CK[k];B(x,yy,CS,CS,cc[0],cc[1]);
+          if(k==="gw"&&s.hosts[n2ip(n)])ops.push(c=>{c.fillStyle="#0f172a";c.beginPath();c.arc(x+CS-3.5,yy+3.5,2.6,0,7);c.fill();});
           T(x+CS/2,yy+CS/2+3.5,String(n&255),8.5,"#1e293b",600,"center");
         }
         y+=Math.ceil((bk.hi-bk.lo+1)/cols)*(CS+GP)+12;
@@ -1441,7 +1522,7 @@ document.addEventListener("click",()=>expMenu.classList.remove("on"));
 expMenu.addEventListener("click",ev=>{
   const b=ev.target.closest("[data-exp]");if(!b)return;
   expMenu.classList.remove("on");
-  ({png:expPNG,pdf:expPDF,csv:expCSV,json:expJSON})[b.dataset.exp]();
+  ({png:expPNG,pdf:expPDF,csv:expCSV,json:expJSON,rack:()=>{impMode="rackout";$("#file").click();}})[b.dataset.exp]();
 });
 
 /* ---------- importar ---------- */
@@ -1472,6 +1553,7 @@ function importText(f){
     catch(err){return importError("El archivo “"+f.name+"” no es un JSON válido.\n\nEmpieza por: "+(txt.slice(0,60)||"(vacío)")+"\n\nError: "+err.message);}
     const nombre=f.name.replace(/\.[a-z]+$/i,"");
     const rooms=rackRooms(d,nombre);
+    if(impMode==="rackout")return rooms?rackExport(f.name,d,rooms):importError("“"+f.name+"” no parece un JSON de RackScope (no encuentro salas ni racks).\n\nEn RackScope: Exportar › Copia de seguridad (JSON).");
     if(rooms)return rackImport(f.name,rooms);
     if(impMode==="rack")return importError("“"+f.name+"” no parece un JSON de RackScope (no encuentro salas ni racks).\n\nEn RackScope: Exportar › Copia de seguridad (JSON).");
     let sites=null;
@@ -1527,20 +1609,56 @@ function rackType(e){
   if(/\bpc\b|puesto|sobremesa|port[aá]til/.test(t))return "pc";
   return "otro";
 }
+// subtitulo de RackScope ("sw-core-01 · 192.168.10.2 · 48p"): nombre de host e IP
+function subParts(sub){
+  let ip=null,raw=null,host=null;
+  String(sub||"").split(/[·|,;]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>{
+    const m=/(\d{1,3}(?:\.\d{1,3}){3})/.exec(x);
+    if(m&&ip==null&&ip2n(m[1])!=null){ip=n2ip(ip2n(m[1]));raw=m[1];return;}
+    if(!host&&/^[a-z0-9][\w.-]*$/i.test(x)&&/[a-z]/i.test(x)&&!/^\d+\s*(p|u|va|w)\b/i.test(x))host=x;
+  });
+  return {ip,raw,host};
+}
 function rackItems(rooms){
   const out=[];
   rooms.forEach(r=>(r.state.racks||[]).forEach(rk=>(rk.elements||[]).forEach(e=>{
     if(!e||e.type==="panel"||e.type==="hueco")return;           // los paneles y huecos no llevan IP
-    let ip=null,host=null;
-    String(e.sub||"").split(/[·|,;]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>{
-      const m=/(\d{1,3}(?:\.\d{1,3}){3})/.exec(x);
-      if(m&&ip==null&&ip2n(m[1])!=null){ip=n2ip(ip2n(m[1]));return;}
-      if(!host&&/^[a-z0-9][\w.-]*$/i.test(x)&&/[a-z]/i.test(x)&&!/^\d+\s*(p|u|va|w)\b/i.test(x))host=x;
-    });
+    const {ip,host}=subParts(e.sub);
     out.push({id:nid("i"),name:host||String(e.name||"SIN NOMBRE"),type:rackType(e),ip,
       note:(host?e.name+" · ":"")+(r.name||"Sala")+" › "+(rk.name||"Rack")});
   })));
   return out;
+}
+// escribe en un JSON de RackScope la IP que cada equipo tiene aqui (por nombre de host)
+function rackExport(fname,d,rooms){
+  const byName={};
+  scopeSites().forEach(si=>si.state.subnets.forEach(s=>{for(const ip in s.hosts){
+    const h=s.hosts[ip];if(h.st==="asig"&&h.name&&!byName[h.name.toLowerCase()])byName[h.name.toLowerCase()]=ip;}}));
+  const ch=[];let same=0,miss=0;
+  rooms.forEach(r=>(r.state.racks||[]).forEach(rk=>(rk.elements||[]).forEach(e=>{
+    if(!e||e.type==="panel"||e.type==="hueco")return;
+    const sp=subParts(e.sub),ip=byName[(sp.host||"").toLowerCase()]||byName[String(e.name||"").toLowerCase()];
+    if(!ip){miss++;return;}
+    if(sp.ip===ip){same++;return;}
+    const old=String(e.sub||"");
+    const nu=sp.raw?old.replace(sp.raw,ip):sp.host?old.replace(sp.host,sp.host+" · "+ip):(old.trim()?old.trim()+" · "+ip:ip);
+    ch.push({e,old,nu,where:(r.name||"Sala")+" › "+(rk.name||"Rack")});
+  })));
+  modal.innerHTML=`<h3>Pasar las IPs a RackScope</h3>
+  <div class="body">
+    <div class="hint">“${esc(fname)}”: <b>${ch.length}</b> equipo(s) cambian de IP o la reciben, ${same} ya la tenían bien y ${miss} no aparecen en ${expScope==="all"?"ninguna sede":"“"+esc(site().name)+"”"} (se busca por nombre de host).</div>
+    ${ch.length?`<ul style="margin:0;padding-left:18px;font-size:11.5px;line-height:1.6;max-height:220px;overflow:auto;font-family:var(--m)">${ch.slice(0,80).map(c=>
+      `<li><b>${esc(c.e.name)}</b> <span style="color:var(--tx3)">${esc(c.where)}</span><br>${esc(c.old||"(vacío)")} → <b>${esc(c.nu)}</b></li>`).join("")}</ul>`:""}
+    <div class="hint">Se genera un archivo nuevo; el tuyo no se toca. Después, en RackScope: <b>Importar</b> › <b>Sustituir todo</b> con ese archivo. Solo cambia el subtítulo de los equipos; cables y racks quedan igual.</div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok"${ch.length?"":" disabled"}>Generar JSON para RackScope</button></div>`;
+  veil.classList.add("on");
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    ch.forEach(c=>c.e.sub=c.nu);
+    const j=JSON.stringify(d,null,2);
+    deliver(new Blob([j],{type:"application/json"}),fname.replace(/\.json$/i,"")+"-con-ips.json","txt",j);
+  };
 }
 function rackImport(nombre,rooms){
   const items=rackItems(rooms);
@@ -1566,6 +1684,7 @@ function rackImport(nombre,rooms){
       if(auto&&conIp.includes(i)){
         const s=subnetOfIp(ip2n(i.ip));
         s.hosts[i.ip]={st:"asig",name:i.name,type:i.type,mac:"",note:"De RackScope: "+i.note};a++;
+        logIp(i.ip,"asignada desde RackScope",i);
       }else S.inventory.push(i);
     });
     if(nuevos.length-a){document.body.classList.remove("noside");$("#sideBtn").classList.add("on");layout();}

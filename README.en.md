@@ -20,6 +20,8 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 - VLANs with ID, name, color and description.
 - Subnets in CIDR notation, from /16 to /30, each linked to its VLAN, with optional gateway, DNS servers and DHCP range.
 - Validates the CIDR (type `192.168.1.5/24` and it suggests `192.168.1.0/24`) and **warns when two subnets overlap**.
+- Suggests the first usable IP as the gateway when you create a subnet.
+- **Split a subnet** into equal parts (a /23 into two /24s, a /24 into four /26s…): the preview doubles as a subnet calculator and, if you apply it, hosts, gateway and DHCP range are distributed.
 
 **One cell per IP**
 - Every subnet is drawn as a grid, and each cell is colored by state: free, assigned, reserved, DHCP range, gateway, network and broadcast.
@@ -27,6 +29,7 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 - **Click a cell** to open its card: device name, type (server, switch, printer, PC, camera, AP, VM or other), MAC and note, with buttons to assign, reserve or release.
 - Hovering already pops up a quick hint with the IP and the device.
 - Warns when a MAC or a device name is already used on another IP.
+- **Per-IP history**: who had it and when it was assigned, reserved or released.
 
 **Know what is left**
 - Per-subnet counter: *"87 / 254 used · 167 free"*, excluding the DHCP range.
@@ -40,6 +43,7 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 **Bring your devices from RackScope**
 - Import a JSON exported from RackScope to get its device list (patch panels and blank spaces are skipped).
 - Devices that already have an IP written in RackScope that falls inside one of your subnets get it assigned straight away; the rest go to the **Equipos sin IP** (devices without IP) list, where you assign them one with a single click.
+- And the other way round: **Exportar › Pasar las IPs a RackScope** writes each device's IP into the subtitle of a RackScope JSON, so both tools stay in sync. It creates a new file; yours is left untouched.
 
 **Get the documentation out**
 - **CSV** for Excel with every assigned and reserved IP.

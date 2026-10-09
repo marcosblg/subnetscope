@@ -20,6 +20,8 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - VLANs con ID, nombre, color y descripción.
 - Subredes en notación CIDR, de /16 a /30, cada una asociada a su VLAN, con puerta de enlace, DNS y rango DHCP opcionales.
 - Comprueba que el CIDR es correcto (si escribes `192.168.1.5/24` te propone `192.168.1.0/24`) y **avisa si dos subredes se solapan**.
+- Propone la primera IP útil como puerta de enlace al crear una subred.
+- **Dividir una subred** en partes iguales (una /23 en dos /24, una /24 en cuatro /26…): la vista previa hace de calculadora y, si la aplicas, reparte las IPs, la puerta de enlace y el rango DHCP.
 
 **Una casilla por IP**
 - Cada subred se dibuja como una cuadrícula y cada casilla tiene el color de su estado: libre, asignada, reservada, rango DHCP, puerta de enlace, red y broadcast.
@@ -27,6 +29,7 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - **Clic en una casilla** y se abre su ficha: nombre del equipo, tipo (servidor, switch, impresora, PC, cámara, AP, VM u otro), MAC y nota, con botones para asignar, reservar o liberar.
 - Al pasar el ratón por encima ya sale un aviso rápido con la IP y el equipo.
 - Avisa si repites una MAC o un nombre de equipo en otra IP.
+- **Historial por IP**: quién la tuvo, cuándo se asignó, se reservó o se liberó.
 
 **Saber qué te queda**
 - Contador por subred: *"87 / 254 usadas · quedan 167 libres"*, descontando el rango DHCP.
@@ -40,6 +43,7 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 **Traer los equipos de RackScope**
 - Importa el JSON exportado de RackScope y saca la lista de equipos (sin paneles de parcheo ni huecos).
 - Los que ya tienen una IP escrita en RackScope que cae en una de tus subredes se asignan solos; el resto queda en la lista **Equipos sin IP**, desde donde les das IP con un clic.
+- Y al revés: **Exportar › Pasar las IPs a RackScope** escribe en el subtítulo de cada equipo de un JSON de RackScope la IP que tiene aquí, para que las dos herramientas no se desincronicen. Genera un archivo nuevo; el tuyo no se toca.
 
 **Sacar la documentación fuera**
 - **CSV** para Excel con todas las IPs asignadas y reservadas.
