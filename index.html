@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>SubnetScope — planificador de IPs y VLANs</title>
 <style>
 :root{
@@ -461,6 +462,7 @@ function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.i
 // todo lo que llega de un JSON (importado o vinculado) se valida: ids, colores, IPs y textos
 const safeId=(x,p)=>typeof x==="string"&&/^[\w-]{1,64}$/.test(x)?x:nid(p);
 const str=x=>x==null?"":String(x);
+const has=(o,k)=>typeof k==="string"&&Object.prototype.hasOwnProperty.call(o,k);
 function safeColor(c){
   c=str(c).trim();
   if(/^#[0-9a-f]{6}$/i.test(c))return c.toLowerCase();
@@ -473,7 +475,7 @@ function migrate(d){
   d.vlans=Array.isArray(d.vlans)?d.vlans.filter(v=>v&&typeof v==="object"):[];
   d.subnets=Array.isArray(d.subnets)?d.subnets.filter(s=>s&&typeof s==="object"&&!parseCIDR(s.cidr).err):[];
   d.inventory=Array.isArray(d.inventory)?d.inventory.filter(i=>i&&typeof i==="object"):[];
-  const vmap={};
+  const vmap=Object.create(null);
   d.vlans.forEach(v=>{
     const old=v.id;v.id=safeId(v.id,"v");if(typeof old==="string")vmap[old]=v.id;
     v.vid=Math.max(1,Math.min(4094,Math.round(+v.vid)||1));v.name=str(v.name)||("VLAN "+v.vid);
@@ -493,7 +495,7 @@ function migrate(d){
     Object.keys(hosts).forEach(k=>{
       const h=hosts[k],ip=ipOk(k,r.net,r.bc);          // fuera de la subred, red o broadcast: se descarta
       if(!h||typeof h!=="object"||!ip)return;
-      s.hosts[ip]={st:h.st==="resv"?"resv":"asig",name:str(h.name),type:TYPES[h.type]?h.type:"otro",
+      s.hosts[ip]={st:h.st==="resv"?"resv":"asig",name:str(h.name),type:has(TYPES,h.type)?h.type:"otro",
         mac:normMac(h.mac)||"",note:str(h.note)};
     });
     const open={};if(s.open&&typeof s.open==="object")Object.keys(s.open).forEach(k=>{if(/^\d+$/.test(k)&&s.open[k])open[k]=true;});
@@ -501,7 +503,7 @@ function migrate(d){
   });
   d.log=Array.isArray(d.log)?d.log.filter(l=>l&&ip2n(l.ip)!=null).map(l=>({t:+l.t||0,ip:n2ip(ip2n(l.ip)),act:str(l.act),name:str(l.name),mac:str(l.mac)})):[];
   d.inventory.forEach(i=>{
-    i.id=safeId(i.id,"i");i.name=str(i.name)||"SIN NOMBRE";i.type=TYPES[i.type]?i.type:"otro";
+    i.id=safeId(i.id,"i");i.name=str(i.name)||"SIN NOMBRE";i.type=has(TYPES,i.type)?i.type:"otro";
     i.note=str(i.note);i.ip=ip2n(i.ip)!=null?n2ip(ip2n(i.ip)):null;
   });
   return d;
@@ -1458,7 +1460,7 @@ function expCSV(){
     const v=si.state.vlans.find(x=>x.id===s.vlan);
     hostRows(si.state,s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.cidr,r.ip,r.est,r.name,r.type,r.mac,r.note]));
   }));
-  const qq=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const qq=v=>{let t=String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};   // evita formulas al abrirlo en Excel
   const txt="\uFEFF"+[head,...rows].map(r=>r.map(qq).join(";")).join("\r\n");
   deliver(new Blob([txt],{type:"text/csv;charset=utf-8"}),"ips-"+scopeName()+"-"+stamp()+".csv","txt",txt);
 }
@@ -1700,7 +1702,7 @@ function rackItems(rooms){
 }
 // escribe en un JSON de RackScope la IP que cada equipo tiene aqui (por nombre de host)
 function rackExport(fname,d,rooms){
-  const byName={};
+  const byName=Object.create(null);
   scopeSites().forEach(si=>si.state.subnets.forEach(s=>{for(const ip in s.hosts){
     const h=s.hosts[ip];if(h.st==="asig"&&h.name&&!byName[h.name.toLowerCase()])byName[h.name.toLowerCase()]=ip;}}));
   const ch=[];let same=0,miss=0;
