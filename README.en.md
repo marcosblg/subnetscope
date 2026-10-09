@@ -12,6 +12,8 @@ It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**
 
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
+> **v1.0** · first public release. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
+
 Nothing to install or download: the link opens the tool with a sample office. Hit **▶ Ver demo** for the guided tour.
 
 ![SubnetScope demo](docs/demo.gif)

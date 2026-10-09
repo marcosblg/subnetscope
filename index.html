@@ -240,6 +240,17 @@ body.ms #msbar{display:flex}
 #cap b{color:#59a9ff}
 #cap button{background:#ffffff1a;border:1px solid #ffffff44;color:#fff;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:700;flex:0 0 auto}
 #tour.on{background:var(--acc);border-color:var(--acc);color:#fff}
+#ver{background:none;border:0;padding:0;margin-left:5px;font:inherit;color:var(--acc);cursor:pointer}
+#ver:hover{text-decoration:underline}
+#news{position:fixed;right:14px;top:66px;z-index:250;width:320px;background:var(--panel);border:2px solid var(--acc);border-radius:12px;box-shadow:var(--sh);padding:12px 14px;font-size:12.5px;line-height:1.5;display:none}
+#news.on{display:block;animation:pin .15s ease-out}
+#news b{color:var(--acc)}
+#news ul{margin:6px 0 10px;padding-left:18px;color:var(--tx2)}
+#news .row{display:flex;gap:6px;justify-content:flex-end}
+.nv h4{margin:14px 0 4px;font-size:13px}
+.nv h4:first-child{margin-top:0}
+.nv h4 span{font-weight:400;color:var(--tx3);font-size:11.5px;margin-left:6px}
+.nv ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6;color:var(--tx2)}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1.5px solid var(--acc);padding:10px 16px;border-radius:10px;font-size:13px;z-index:400;opacity:0;pointer-events:none;transition:.2s;box-shadow:var(--sh);font-weight:600}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
 #legend{position:fixed;right:14px;bottom:14px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:11px;z-index:50;box-shadow:var(--sh)}
@@ -270,7 +281,7 @@ body.ms #msbar{display:flex}
 </head>
 <body>
 <div id="top">
-  <div class="brand"><i></i><div>SubnetScope<small>plan de IPs y VLANs</small></div></div>
+  <div class="brand"><i></i><div>SubnetScope<small>plan de IPs y VLANs ·<button id="ver" title="Ver novedades"></button></small></div></div>
   <div class="sep"></div>
   <div class="roomwrap">
     <span class="lb">Sede</span>
@@ -341,6 +352,7 @@ body.ms #msbar{display:flex}
 <div id="cap"><span id="capT"></span><button id="capX">✕ salir</button></div>
 <div id="tip"></div>
 <div id="toast"></div>
+<div id="news"></div>
 <div id="print"></div>
 <div id="legend"></div>
 
@@ -446,36 +458,61 @@ let DB=null,S=null;
 const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[]});
 function newSite(name,st){return {id:nid("s"),name:name||"Oficina de ejemplo",state:migrate(st||seed())};}
 function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
+// todo lo que llega de un JSON (importado o vinculado) se valida: ids, colores, IPs y textos
+const safeId=(x,p)=>typeof x==="string"&&/^[\w-]{1,64}$/.test(x)?x:nid(p);
+const str=x=>x==null?"":String(x);
+function safeColor(c){
+  c=str(c).trim();
+  if(/^#[0-9a-f]{6}$/i.test(c))return c.toLowerCase();
+  if(/^#[0-9a-f]{3}$/i.test(c))return ("#"+c[1]+c[1]+c[2]+c[2]+c[3]+c[3]).toLowerCase();
+  return "#94a3b8";
+}
 function migrate(d){
-  d=d&&typeof d==="object"?d:blankState();
-  d.zoom=+d.zoom||1;
-  d.vlans=Array.isArray(d.vlans)?d.vlans:[];
-  d.subnets=Array.isArray(d.subnets)?d.subnets.filter(s=>s&&!parseCIDR(s.cidr).err):[];
-  d.inventory=Array.isArray(d.inventory)?d.inventory:[];
-  d.vlans.forEach(v=>{v.id=v.id||nid("v");v.vid=+v.vid||1;v.name=v.name||("VLAN "+v.vid);v.color=v.color||"#94a3b8";v.desc=v.desc||"";});
-  d.subnets.forEach(s=>{
-    s.id=s.id||nid("n");s.cidr=parseCIDR(s.cidr).cidr;
-    ["name","gw","dns","dhcpFrom","dhcpTo"].forEach(f=>s[f]=s[f]||"");
-    if(s.vlan&&!d.vlans.some(v=>v.id===s.vlan))s.vlan="";
-    s.hosts=s.hosts&&typeof s.hosts==="object"?s.hosts:{};
-    s.open=s.open&&typeof s.open==="object"?s.open:{};
-    s.fold=!!s.fold;
-    Object.keys(s.hosts).forEach(k=>{
-      const h=s.hosts[k],n=ip2n(k);
-      if(!h||n==null){delete s.hosts[k];return;}
-      if(n2ip(n)!==k){delete s.hosts[k];s.hosts[n2ip(n)]=h;}
-      h.st=h.st==="resv"?"resv":"asig";h.name=h.name||"";h.type=TYPES[h.type]?h.type:"otro";h.mac=h.mac||"";h.note=h.note||"";
-    });
+  d=d&&typeof d==="object"&&!Array.isArray(d)?d:blankState();
+  d.zoom=Math.max(.5,Math.min(1.6,+d.zoom||1));
+  d.vlans=Array.isArray(d.vlans)?d.vlans.filter(v=>v&&typeof v==="object"):[];
+  d.subnets=Array.isArray(d.subnets)?d.subnets.filter(s=>s&&typeof s==="object"&&!parseCIDR(s.cidr).err):[];
+  d.inventory=Array.isArray(d.inventory)?d.inventory.filter(i=>i&&typeof i==="object"):[];
+  const vmap={};
+  d.vlans.forEach(v=>{
+    const old=v.id;v.id=safeId(v.id,"v");if(typeof old==="string")vmap[old]=v.id;
+    v.vid=Math.max(1,Math.min(4094,Math.round(+v.vid)||1));v.name=str(v.name)||("VLAN "+v.vid);
+    v.color=safeColor(v.color);v.desc=str(v.desc);
   });
-  d.log=Array.isArray(d.log)?d.log.filter(l=>l&&l.ip):[];
-  d.inventory.forEach(i=>{i.id=i.id||nid("i");i.name=i.name||"SIN NOMBRE";i.type=TYPES[i.type]?i.type:"otro";i.note=i.note||"";});
+  const ipOk=(x,lo,hi)=>{const n=ip2n(x);return n!=null&&n>lo&&n<hi?n2ip(n):"";};
+  d.subnets.forEach(s=>{
+    const r=parseCIDR(s.cidr);
+    s.id=safeId(s.id,"n");s.cidr=r.cidr;s.name=str(s.name);
+    s.vlan=typeof s.vlan==="string"&&vmap[s.vlan]?vmap[s.vlan]:"";
+    s.gw=ipOk(s.gw,r.net,r.bc);
+    s.dns=str(s.dns).split(/[\s,;]+/).filter(x=>ip2n(x)!=null).map(x=>n2ip(ip2n(x))).join(", ");
+    s.dhcpFrom=ipOk(s.dhcpFrom,r.net,r.bc);s.dhcpTo=ipOk(s.dhcpTo,r.net,r.bc);
+    if(!s.dhcpFrom||!s.dhcpTo||ip2n(s.dhcpFrom)>ip2n(s.dhcpTo))s.dhcpFrom=s.dhcpTo="";
+    const hosts=s.hosts&&typeof s.hosts==="object"?s.hosts:{};
+    s.hosts={};
+    Object.keys(hosts).forEach(k=>{
+      const h=hosts[k],ip=ipOk(k,r.net,r.bc);          // fuera de la subred, red o broadcast: se descarta
+      if(!h||typeof h!=="object"||!ip)return;
+      s.hosts[ip]={st:h.st==="resv"?"resv":"asig",name:str(h.name),type:TYPES[h.type]?h.type:"otro",
+        mac:normMac(h.mac)||"",note:str(h.note)};
+    });
+    const open={};if(s.open&&typeof s.open==="object")Object.keys(s.open).forEach(k=>{if(/^\d+$/.test(k)&&s.open[k])open[k]=true;});
+    s.open=open;s.fold=!!s.fold;
+  });
+  d.log=Array.isArray(d.log)?d.log.filter(l=>l&&ip2n(l.ip)!=null).map(l=>({t:+l.t||0,ip:n2ip(ip2n(l.ip)),act:str(l.act),name:str(l.name),mac:str(l.mac)})):[];
+  d.inventory.forEach(i=>{
+    i.id=safeId(i.id,"i");i.name=str(i.name)||"SIN NOMBRE";i.type=TYPES[i.type]?i.type:"otro";
+    i.note=str(i.note);i.ip=ip2n(i.ip)!=null?n2ip(ip2n(i.ip)):null;
+  });
   return d;
 }
 function parseDB(d){
-  if(!d||!Array.isArray(d.sites)||!d.sites.length)return null;
-  d.sites.forEach(r=>{r.id=r.id||nid("s");r.name=r.name||"Sede";r.state=migrate(r.state);});
-  return {v:1,current:d.sites.some(r=>r.id===d.current)?d.current:d.sites[0].id,
-          theme:d.theme||"dark",expScope:d.expScope||"site",sites:d.sites};
+  if(!d||!Array.isArray(d.sites))return null;
+  const sites=d.sites.filter(r=>r&&typeof r==="object");
+  if(!sites.length)return null;
+  sites.forEach(r=>{r.id=safeId(r.id,"s");r.name=str(r.name)||"Sede";r.state=migrate(r.state);});
+  return {v:1,current:sites.some(r=>r.id===d.current)?d.current:sites[0].id,
+          theme:d.theme==="light"?"light":"dark",expScope:d.expScope==="all"?"all":"site",sites};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);if(raw){const d=parseDB(JSON.parse(raw));if(d)return d;}}catch(e){}
@@ -490,6 +527,7 @@ function useSite(id){
 }
 let lsOK=true,fileHandle=null,fileName="",wTimer=null;
 function save(){
+  HN.clear();
   try{localStorage.setItem(KEY,JSON.stringify(DB));lsOK=true;}
   catch(e){lsOK=false;}
   if(fileHandle){clearTimeout(wTimer);wTimer=setTimeout(writeFile,600);}
@@ -593,14 +631,20 @@ function cellFn(s){
   };
 }
 // recuento de un tramo (por defecto la subred entera)
+const HN=new Map();                               // subred -> [[ip numerica, estado]], se vacia al guardar o pintar
+function hostNums(s){
+  let a=HN.get(s);
+  if(!a){a=Object.keys(s.hosts).map(k=>[ip2n(k),s.hosts[k].st]);HN.set(s,a);}
+  return a;
+}
 function stats(s,lo,hi){
   const p=P(s);if(lo==null){lo=p.net;hi=p.bc;}
   const a=Math.max(lo,p.net+1),b=Math.min(hi,p.bc-1),usable=Math.max(0,b-a+1);
   const g=ip2n(s.gw),d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo),hasD=d0!=null&&d1!=null;
   let asig=0,resv=0,gw=0,inD=0,dh=0;
-  for(const k in s.hosts){
-    const n=ip2n(k);if(n==null||n<a||n>b||n===g)continue;
-    if(s.hosts[k].st==="resv")resv++;else asig++;
+  for(const [n,st] of hostNums(s)){
+    if(n==null||n<a||n>b||n===g)continue;
+    if(st==="resv")resv++;else asig++;
     if(hasD&&n>=d0&&n<=d1)inD++;
   }
   if(g!=null&&g>=a&&g<=b){gw=1;if(hasD&&g>=d0&&g<=d1)inD++;}
@@ -625,6 +669,7 @@ function barHTML(st){
 
 /* ---------- render ---------- */
 function render(){
+  HN.clear();
   renderSide();
   netsEl.innerHTML="";
   if(!S.subnets.length){
@@ -837,7 +882,12 @@ popH.addEventListener("pointermove",ev=>{
   popMoved=true;
 });
 popH.addEventListener("pointerup",()=>{popDrag=null;});
-pop.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.tagName==="INPUT"){ev.preventDefault();commitCell("asig");}});
+pop.addEventListener("keydown",ev=>{
+  if(ev.key!=="Enter"||ev.target.tagName!=="INPUT"||!openC)return;
+  ev.preventDefault();
+  const s=subById(openC.sid),h=s&&s.hosts[n2ip(openC.n)];
+  commitCell(h&&h.st==="resv"&&!$("#p_name").value.trim()?"resv":"asig");
+});
 
 // historial por IP de la sede (sobrevive a liberar la IP o a dividir la subred)
 function logIp(ip,act,h){
@@ -1065,7 +1115,8 @@ function clearSearch(){
   sres.classList.remove("on");document.body.classList.remove("searching");
   if(S)render();
 }
-search.addEventListener("input",runSearch);
+let sTimer=null;
+search.addEventListener("input",()=>{clearTimeout(sTimer);sTimer=setTimeout(runSearch,120);});
 search.addEventListener("focus",()=>{if(q)drawSres();});
 search.addEventListener("keydown",ev=>{
   if(ev.key==="ArrowDown"){ev.preventDefault();sresCur=Math.min(sresList.length-1,sresCur+1);drawSres();}
@@ -1577,7 +1628,8 @@ function importText(f){
     if(d&&Array.isArray(d.sites)&&d.sites.length)sites=d.sites;
     else if(d&&d.state&&Array.isArray(d.state.subnets))sites=[d];
     if(!sites)return importError("El archivo “"+f.name+"” es un JSON, pero no es una copia de SubnetScope ni un JSON de RackScope.");
-    sites.forEach(r=>{r.id=r.id||nid("s");r.name=r.name||nombre||"Sede";r.state=migrate(r.state);});
+    sites=sites.filter(r=>r&&typeof r==="object");
+    sites.forEach(r=>{r.id=safeId(r.id,"s");r.name=str(r.name)||nombre||"Sede";r.state=migrate(r.state);});
     importDialog(f.name,sites,d);
   };
   rd.readAsText(f);
@@ -1681,12 +1733,18 @@ function rackImport(nombre,rooms){
   const items=rackItems(rooms);
   if(!items.length)return importError("“"+nombre+"” es de RackScope, pero no tiene equipos con IP posible (solo paneles de parcheo o huecos).");
   const known=n=>findHost(h=>h.name.toLowerCase()===n.toLowerCase())||S.inventory.some(i=>i.name.toLowerCase()===n.toLowerCase());
-  const nuevos=items.filter(i=>!known(i.name)),dup=items.length-nuevos.length;
-  const conIp=nuevos.filter(i=>{if(!i.ip)return false;const n=ip2n(i.ip),s=subnetOfIp(n);return s&&!s.hosts[i.ip]&&["libre","dhcp","gw"].includes(cellFn(s)(n));});
+  const vistos=new Set(),nuevos=items.filter(i=>{const k=i.name.toLowerCase();if(known(i.name)||vistos.has(k))return false;vistos.add(k);return true;});
+  const dup=items.length-nuevos.length,tomadas=new Set();
+  const conIp=nuevos.filter(i=>{                    // si dos equipos traen la misma IP, solo el primero se la queda
+    if(!i.ip||tomadas.has(i.ip))return false;
+    const n=ip2n(i.ip),s=subnetOfIp(n);
+    if(!(s&&!s.hosts[i.ip]&&["libre","dhcp","gw"].includes(cellFn(s)(n))))return false;
+    tomadas.add(i.ip);return true;
+  });
   modal.innerHTML=`<h3>Equipos de RackScope</h3>
   <div class="body">
     <div class="hint">“${esc(nombre)}” trae <b>${items.length} equipos</b> en ${rooms.length} sala(s) (sin contar paneles de parcheo ni huecos).
-      ${dup?`<br><b>${dup}</b> ya están en esta sede con el mismo nombre y no se tocan.`:""}</div>
+      ${dup?`<br><b>${dup}</b> ya están en esta sede o repetidos en el archivo con el mismo nombre, y no se tocan.`:""}</div>
     ${conIp.length?`<label class="chk"><input type="checkbox" id="r_auto" checked> Asignar ya la IP a los <b>${conIp.length}</b> que la traen escrita en RackScope y caen en una subred de “${esc(site().name)}”</label>`:""}
     <div class="hint">El resto pasa a la lista <b>Equipos sin IP</b> del panel izquierdo, desde donde les das IP con un clic.</div>
     <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;max-height:180px;overflow:auto">${nuevos.map(i=>`<li><b>${esc(i.name)}</b> · ${TYPES[i.type]}${i.ip?" · "+i.ip:""}</li>`).join("")}</ul>
@@ -1878,6 +1936,38 @@ document.addEventListener("click",ev=>{
 });
 addEventListener("beforeunload",ev=>{if(!lsOK&&!fileHandle){ev.preventDefault();ev.returnValue="";}});
 
+/* ---------- versión y novedades ---------- */
+const VERSION="1.0";
+const NEWS=[
+ {v:"1.0",d:"2 de octubre de 2026",items:[
+   "Primera versión pública: sedes, VLANs y subredes de /16 a /30 con aviso de solapes.",
+   "Una casilla por IP con su estado, ficha con equipo, tipo, MAC, nota e historial.",
+   "Siguiente IP libre, buscador por IP, nombre o MAC, selección múltiple y dividir subredes.",
+   "Importa los equipos de RackScope y le devuelve las IPs.",
+   "Exportación a CSV, PDF, PNG y JSON, y guardado en archivo vinculado."]}
+];
+function showNews(){
+  modal.innerHTML=`<h3>Novedades de SubnetScope</h3><div class="body nv">${NEWS.map(n=>
+    `<div><h4>v${n.v}<span>${n.d}</span></h4><ul>${n.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>`).join("")}</div>
+    <div class="foot"><button class="btn acc" id="m_ok">Cerrar</button></div>`;
+  veil.classList.add("on");$("#m_ok").onclick=closeModal;
+}
+$("#ver").textContent=" v"+VERSION;
+$("#ver").onclick=showNews;
+// a quien ya la usaba se le avisa una vez de lo nuevo; a quien entra por primera vez, no
+function checkNews(hadData){
+  let seen=null;
+  try{seen=localStorage.getItem(KEY+".version");localStorage.setItem(KEY+".version",VERSION);}catch(e){return;}
+  if(seen===VERSION||(!seen&&!hadData))return;
+  const n=NEWS[0],box=$("#news");
+  box.innerHTML=`<b>Novedades de la v${n.v}</b><ul>${n.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>
+    <div class="row"><button class="btn sm" id="newsAll">Ver todas</button><button class="btn sm acc" id="newsOk">Entendido</button></div>`;
+  box.classList.add("on");
+  $("#newsOk").onclick=()=>box.classList.remove("on");
+  $("#newsAll").onclick=()=>{box.classList.remove("on");showNews();};
+}
+let hadData=false;try{hadData=!!localStorage.getItem(KEY);}catch(e){}
+
 DB=load();
 S=site().state;
 setScope(DB.expScope);
@@ -1890,6 +1980,7 @@ render();
 try{localStorage.setItem(KEY+".test","1");localStorage.removeItem(KEY+".test");}catch(e){lsOK=false;}
 updateSaveUI();
 restoreHandle();
+checkNews(hadData);
 </script>
 </body>
 </html>

@@ -12,6 +12,8 @@ Es la herramienta hermana de **[RackScope](https://github.com/marcosblg/rackscop
 
 ### 👉 [Pruébalo ahora en el navegador](https://marcosblg.github.io/subnetscope/)
 
+> **v1.0** · primera versión pública. [Ver las novedades](CHANGELOG.md)
+
 No hay que instalar ni descargar nada: el enlace abre la herramienta con una oficina de ejemplo. Pulsa **▶ Ver demo** para la visita guiada.
 
 ![Demostración de SubnetScope](docs/demo.gif)
