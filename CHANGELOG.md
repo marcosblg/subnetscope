@@ -2,7 +2,7 @@
 
 # Novedades de SubnetScope
 
-## v1.0 — 2 de octubre de 2026
+## v1.0 — 9 de octubre de 2026
 
 Primera versión pública.
 
@@ -19,7 +19,7 @@ Primera versión pública.
 
 # What's new in SubnetScope
 
-## v1.0 — October 2, 2026
+## v1.0 — October 9, 2026
 
 First public release.
 
