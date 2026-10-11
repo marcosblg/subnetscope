@@ -12,7 +12,7 @@ Es la herramienta hermana de **[RackScope](https://github.com/marcosblg/rackscop
 
 ### 👉 [Pruébalo ahora en el navegador](https://marcosblg.github.io/subnetscope/)
 
-> **v1.0** · primera versión pública. [Ver las novedades](CHANGELOG.md)
+> 🆕 **v1.1** (11 de octubre de 2026): IPv6 en doble pila y reglas NAT documentadas, pedidas en los comentarios. [Ver las novedades](CHANGELOG.md)
 
 No hay que instalar ni descargar nada: el enlace abre la herramienta con una oficina de ejemplo. Pulsa **▶ Ver demo** para la visita guiada.
 
@@ -44,6 +44,17 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - **Buscador** por IP, nombre de equipo o MAC, que resalta la casilla y despliega su bloque.
 - **Selección múltiple** (clic, arrastrar o Shift+clic) para reservar o liberar rangos enteros de golpe.
 
+**IPv6 en doble pila**
+- Cada subred puede llevar su **prefijo IPv6** y su puerta de enlace IPv6 junto al IPv4.
+- Lista de **direcciones IPv6 fijas** por subred, con la misma ficha de siempre: equipo, tipo, MAC y nota. En IPv6 no se dibuja una casilla por IP (un /64 son 18 trillones): se apuntan solo las fijas.
+- **Plan IPv6**: le das el /48 o /56 del operador y propone un /64 para cada subred, usando el ID de VLAN cuando se puede (VLAN 10 → …:10::/64). Sirve también de calculadora de prefijos.
+
+**Reglas NAT**
+- Documenta qué se publica hacia Internet: IP y puerto públicos → IP interna, con protocolo y descripción.
+- Las IPs publicadas llevan una marca en la cuadrícula y su ficha muestra sus reglas.
+- Avisa si dos reglas usan el mismo puerto público o si una apunta a una IP sin documentar.
+- Solo se documentan: SubnetScope no se conecta al firewall.
+
 **Sedes o redes**
 - Desplegable de sedes: cada una con sus VLANs y subredes, independientes.
 
@@ -53,7 +64,7 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - Y al revés: **Exportar › Pasar las IPs a RackScope** escribe en el subtítulo de cada equipo de un JSON de RackScope la IP que tiene aquí, para que las dos herramientas no se desincronicen. Genera un archivo nuevo; el tuyo no se toca.
 
 **Sacar la documentación fuera**
-- **CSV** para Excel con todas las IPs asignadas y reservadas.
+- **CSV** para Excel con todas las IPs asignadas y reservadas, IPv4 e IPv6, y otro con las reglas NAT.
 - **PDF** con la tabla de VLANs, el resumen de subredes y, por cada subred, su cuadrícula y el listado de IPs.
 - Imagen **PNG** de las cuadrículas.
 - **JSON** de copia de seguridad.
@@ -77,7 +88,7 @@ Un aviso importante: el almacenamiento del navegador va atado a la ruta del arch
 
 ## Qué no hace (todavía)
 
-SubnetScope es documentación manual: no escanea la red, no hace ping, no consulta SNMP y no trabaja con IPv6.
+SubnetScope es documentación manual: no escanea la red, no hace ping, no consulta SNMP y no configura ningún equipo (las reglas NAT, por ejemplo, solo se apuntan).
 
 ## Compatibilidad
 

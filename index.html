@@ -197,6 +197,28 @@ body.ms #msbar{display:flex}
 #pop .pf{padding:9px 12px;border-top:1px solid var(--line2);background:var(--panel2);display:flex;gap:6px}
 .empty{font-size:12.5px;color:var(--tx2);text-align:center;padding:12px 6px;line-height:1.6}
 .ctx{font-size:11px;color:var(--tx3);font-family:var(--m)}
+.c.nat::before{content:"";position:absolute;left:-3px;top:-3px;width:7px;height:7px;border-radius:2px;background:#22d3ee;border:1.5px solid var(--panel)}
+.v6{margin-top:12px;border-top:1px dashed var(--line2);padding-top:10px}
+.v6h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px;font-size:12px}
+.v6h b{font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--tx3)}
+.v6h .p6{font-family:var(--m);color:var(--gold);font-size:13px}
+.v6h .cnt{font-size:11px;color:var(--tx3);font-family:var(--m)}
+.v6t{border-collapse:collapse;font-size:12px;min-width:540px}
+.v6t td,.v6t th{padding:4px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.v6t th{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--tx3);font-weight:700}
+.v6t td.a{font-family:var(--m);color:var(--tx)}
+.v6t tr.flash td{animation:fl6 1.4s ease-out}
+@keyframes fl6{0%,40%{background:#ffd16644}}
+.v6t .st{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid}
+.v6t button{background:none;border:0;color:var(--tx3);cursor:pointer;padding:0 3px;font-size:13px}
+.v6t button:hover{color:var(--acc)}
+.nr{display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:7px 8px;margin-bottom:5px;font-size:11.5px;color:var(--tx)}
+.nr:hover{border-color:var(--acc)}
+.nr b{font-family:var(--m);font-size:11px;font-weight:700}
+.nr small{display:block;color:var(--tx3);font-size:10.5px;margin-top:2px}
+.nr.warn{border-color:#ffb02099}
+.hist a{color:var(--acc);font-family:var(--m)}
+.hist .btn{margin-top:6px}
 .hist{font-size:11px;color:var(--tx2);border-top:1px solid var(--line);padding-top:8px}
 .hist label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:4px;font-weight:700}
 .hist div{padding:2px 0;font-family:var(--m);font-size:10.5px}
@@ -310,7 +332,8 @@ body.ms #msbar{display:flex}
       <hr>
       <button data-exp="png">🖼 Imagen PNG<small>Las cuadrículas de todas las subredes</small></button>
       <button data-exp="pdf">📄 PDF / Imprimir<small>Plan por subred + tabla de VLANs (elige "Guardar como PDF")</small></button>
-      <button data-exp="csv">📊 Excel (CSV)<small>Todas las IPs asignadas y reservadas</small></button>
+      <button data-exp="csv">📊 Excel (CSV)<small>Todas las IPs asignadas y reservadas, IPv4 e IPv6</small></button>
+      <button data-exp="nat">🔀 Reglas NAT (CSV)<small>Qué se publica hacia Internet</small></button>
       <button data-exp="rack">🔁 Pasar las IPs a RackScope<small>Escribe las IPs en un JSON de RackScope que elijas</small></button>
       <hr>
       <button data-exp="json">💾 Copia de seguridad (JSON)<small>Para volver a importarlo aquí</small></button>
@@ -335,7 +358,8 @@ body.ms #msbar{display:flex}
 
 <aside id="side">
   <div class="sec" id="secV"><div class="sh"><span>VLANs</span><button class="btn sm" id="vAdd">＋ VLAN</button></div><div id="vlist"></div></div>
-  <div class="sec" id="secS"><div class="sh"><span>Subredes</span><button class="btn sm" id="nAdd">＋ Subred</button></div><div id="slist"></div></div>
+  <div class="sec" id="secS"><div class="sh"><span>Subredes</span><button class="btn sm" id="v6Plan" title="Proponer un prefijo IPv6 /64 para cada subred">IPv6…</button><button class="btn sm" id="nAdd">＋ Subred</button></div><div id="slist"></div></div>
+  <div class="sec" id="secN"><div class="sh"><span>Reglas NAT</span><button class="btn sm" id="natAdd">＋ Regla</button></div><div id="nlist"></div></div>
   <div class="sec" id="secI"><div class="sh"><span>Equipos sin IP</span><button class="btn sm" id="rsImp" title="Traer la lista de equipos de un JSON exportado de RackScope">⇣ RackScope</button></div><div id="ilist"></div></div>
 </aside>
 
@@ -404,6 +428,40 @@ function normMac(s){
   return h.length===12?h.toUpperCase().match(/../g).join(":"):null;
 }
 
+/* ---------- IPv6 (BigInt; en los datos siempre como texto) ---------- */
+function ip6n(t){
+  t=String(t==null?"":t).trim().toLowerCase();
+  if(!/^[0-9a-f:]+$/.test(t)||t.indexOf(":")<0)return null;
+  const dbl=t.split("::");if(dbl.length>2)return null;
+  const head=dbl[0]?dbl[0].split(":"):[],tail=dbl.length===2&&dbl[1]?dbl[1].split(":"):[];
+  const miss=8-head.length-tail.length;
+  if(dbl.length===1?miss!==0:miss<1)return null;
+  const parts=head.concat(new Array(dbl.length===2?miss:0).fill("0"),tail);
+  let n=0n;
+  for(const x of parts){if(!/^[0-9a-f]{1,4}$/.test(x))return null;n=(n<<16n)+BigInt(parseInt(x,16));}
+  return n;
+}
+function n2ip6(n){                                  // forma corta de la RFC 5952
+  const h=[];for(let i=7;i>=0;i--)h.push(Number((n>>BigInt(i*16))&0xffffn));
+  let bs=-1,bl=0;
+  for(let i=0;i<8;){if(h[i]===0){let j=i;while(j<8&&h[j]===0)j++;if(j-i>bl&&j-i>=2){bs=i;bl=j-i;}i=j;}else i++;}
+  const hx=h.map(x=>x.toString(16));
+  return bs<0?hx.join(":"):hx.slice(0,bs).join(":")+"::"+hx.slice(bs+bl).join(":");
+}
+function parse6(t){
+  const m=/^\s*([0-9a-fA-F:]+)\s*\/\s*(\d{1,3})\s*$/.exec(String(t||""));
+  if(!m)return {err:"Formato del prefijo IPv6: 2001:db8:10::/64"};
+  const ip=ip6n(m[1]),len=+m[2];
+  if(ip==null)return {err:m[1]+" no es una dirección IPv6 válida"};
+  if(len<16||len>128)return {err:"El prefijo IPv6 tiene que estar entre /16 y /128"};
+  const host=BigInt(128-len),net=ip>>host<<host;
+  if(net!==ip)return {err:`${m[1]} no es el inicio de un /${len}: el correcto es ${n2ip6(net)}/${len}`,fix:n2ip6(net)+"/"+len};
+  return {net,len,last:net|((1n<<host)-1n),cidr:n2ip6(net)+"/"+len};
+}
+const PC6={};
+const P6=s=>PC6[s.v6]||(PC6[s.v6]=parse6(s.v6));
+const overlap6=(a,b)=>a.net<=b.last&&b.net<=a.last;
+
 /* ---------- red de ejemplo ---------- */
 function seed(){
   // Datos de demostración: nombres, MAC y equipos inventados.
@@ -413,7 +471,7 @@ function seed(){
   const vU=V(20,"Usuarios","#38bdf8","Puestos de trabajo, impresoras y puntos de acceso");
   const vV=V(30,"Voz","#fb923c","Telefonía IP: centralita y terminales");
   const vI=V(40,"Invitados","#a3e635","Wifi de visitas, aislada de la red interna");
-  const N=(v,cidr,name,gw,dns,df,dt,open)=>({id:nid("n"),vlan:v.id,cidr,name,gw,dns,dhcpFrom:df,dhcpTo:dt,hosts:{},open:open||{},fold:false});
+  const N=(v,cidr,name,gw,dns,df,dt,open)=>({id:nid("n"),vlan:v.id,cidr,name,gw,dns,dhcpFrom:df,dhcpTo:dt,hosts:{},open:open||{},fold:false,v6:"",gw6:"",hosts6:{}});
   const nS=N(vS,"192.168.10.0/24","Servidores e infraestructura","192.168.10.1","192.168.10.10, 192.168.10.11","","");
   const nU=N(vU,"192.168.20.0/23","Usuarios — plantas 0 y 1","192.168.20.1","192.168.10.10, 192.168.10.11","192.168.20.100","192.168.21.200",{0:true});
   const nV=N(vV,"192.168.30.0/25","Telefonía IP","192.168.30.1","192.168.10.10","192.168.30.20","192.168.30.120");
@@ -451,12 +509,22 @@ function seed(){
   R(nV,"192.168.30.121","192.168.30.126","Videoconferencia (previsto)");
   A(nI,"192.168.40.2","portal-cautivo","servidor","Portal de acceso de invitados",false);
   R(nI,"192.168.40.251","192.168.40.254","Reservadas para el proveedor wifi");
-  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[]};
+  // IPv6 en doble pila: el ID de VLAN como identificador de subred (prefijos de documentacion)
+  nS.v6="2001:db8:a10:10::/64";nS.gw6="2001:db8:a10:10::1";
+  [["10","dc-01"],["11","dc-02"],["20","srv-app-01"],["41","vm-web-01"],["42","vm-mail-01"]].forEach(([x,n])=>{
+    const h=Object.values(nS.hosts).find(y=>y.name===n);nS.hosts6["2001:db8:a10:10::"+x]={st:"asig",name:n,type:h.type,mac:h.mac,note:""};});
+  nU.v6="2001:db8:a10:20::/64";nU.gw6="2001:db8:a10:20::1";
+  nV.v6="2001:db8:a10:30::/64";nV.gw6="2001:db8:a10:30::1";
+  const T=(ep,pr,int,ip,desc)=>({id:nid("t"),ext:"203.0.113.10",extPort:ep,proto:pr,int,intPort:ip,desc});
+  const nat=[T("443","tcp","192.168.10.41","","Web corporativa"),T("80","tcp","192.168.10.41","","Redirección a HTTPS"),
+    T("25","tcp","192.168.10.42","","Correo entrante"),T("1194","udp","192.168.10.45","","VPN de teletrabajo"),
+    T("5060-5061","udp","192.168.30.2","","SIP del operador")];
+  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[],nat};
 }
 
 /* ---------- estado ---------- */
 let DB=null,S=null;
-const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[]});
+const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[],nat:[]});
 function newSite(name,st){return {id:nid("s"),name:name||"Oficina de ejemplo",state:migrate(st||seed())};}
 function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
 // todo lo que llega de un JSON (importado o vinculado) se valida: ids, colores, IPs y textos
@@ -498,10 +566,21 @@ function migrate(d){
       s.hosts[ip]={st:h.st==="resv"?"resv":"asig",name:str(h.name),type:has(TYPES,h.type)?h.type:"otro",
         mac:normMac(h.mac)||"",note:str(h.note)};
     });
+    // IPv6: prefijo, puerta de enlace y direcciones fijas dentro del prefijo
+    const r6=parse6(s.v6);s.v6=r6.err?"":r6.cidr;
+    const in6=x=>{const n=ip6n(x);return !r6.err&&n!=null&&n>=r6.net&&n<=r6.last?n2ip6(n):"";};
+    s.gw6=in6(s.gw6);
+    const h6=s.hosts6&&typeof s.hosts6==="object"?s.hosts6:{};s.hosts6={};
+    Object.keys(h6).forEach(k=>{const h=h6[k],a=in6(k);if(!h||typeof h!=="object"||!a)return;
+      s.hosts6[a]={st:h.st==="resv"?"resv":"asig",name:str(h.name),type:has(TYPES,h.type)?h.type:"otro",mac:normMac(h.mac)||"",note:str(h.note)};});
     const open={};if(s.open&&typeof s.open==="object")Object.keys(s.open).forEach(k=>{if(/^\d+$/.test(k)&&s.open[k])open[k]=true;});
     s.open=open;s.fold=!!s.fold;
   });
-  d.log=Array.isArray(d.log)?d.log.filter(l=>l&&ip2n(l.ip)!=null).map(l=>({t:+l.t||0,ip:n2ip(ip2n(l.ip)),act:str(l.act),name:str(l.name),mac:str(l.mac)})):[];
+  const ipAny=x=>ip2n(x)!=null?n2ip(ip2n(x)):(ip6n(x)!=null?n2ip6(ip6n(x)):"");
+  d.log=Array.isArray(d.log)?d.log.filter(l=>l&&ipAny(l.ip)).map(l=>({t:+l.t||0,ip:ipAny(l.ip),act:str(l.act),name:str(l.name),mac:str(l.mac)})):[];
+  d.nat=Array.isArray(d.nat)?d.nat.filter(x=>x&&typeof x==="object"&&ip2n(x.int)!=null).map(x=>({id:safeId(x.id,"t"),
+    ext:ip2n(x.ext)!=null?n2ip(ip2n(x.ext)):"",extPort:portOk(x.extPort)||"",proto:has(PROTOS,x.proto)?x.proto:"tcp",
+    int:n2ip(ip2n(x.int)),intPort:portOk(x.intPort)||"",desc:str(x.desc)})):[];
   d.inventory.forEach(i=>{
     i.id=safeId(i.id,"i");i.name=str(i.name)||"SIN NOMBRE";i.type=has(TYPES,i.type)?i.type:"otro";
     i.note=str(i.note);i.ip=ip2n(i.ip)!=null?n2ip(ip2n(i.ip)):null;
@@ -683,7 +762,8 @@ function render(){
   const add=document.createElement("button");add.className="addnet";add.textContent="＋ subred";
   add.onclick=()=>editSubnet(null);netsEl.appendChild(add);
   let used=0;S.subnets.forEach(s=>used+=stats(s).used);
-  $("#stats").textContent=`${S.vlans.length} VLAN · ${S.subnets.length} subredes · ${fmt(used)} IPs en uso`;
+  const n6=S.subnets.reduce((a,s)=>a+Object.keys(s.hosts6).length,0);
+  $("#stats").textContent=`${S.vlans.length} VLAN · ${S.subnets.length} subredes · ${fmt(used)} IPs en uso${n6?" · "+n6+" IPv6":""}${S.nat.length?" · "+S.nat.length+" NAT":""}`;
   $("#invlist").innerHTML=S.inventory.map(i=>`<option value="${esc(i.name)}">${esc(TYPES[i.type])}${i.ip?" · "+i.ip:""}</option>`).join("");
   markSel();
   if(openC){const n=cellNode(openC.sid,openC.n);if(n){n.classList.add("sel");openNode=n;placePop();}else closePop();}
@@ -693,6 +773,7 @@ function counterText(st){
 }
 function netNode(s,i){
   const p=P(s),v=vlanOf(s),col=v?v.color:"#8797b5",st=stats(s),ov=overlapsOf(s);
+  const ov6=s.v6?S.subnets.filter(x=>x!==s&&x.v6&&overlap6(P6(s),P6(x))):[];
   const d=document.createElement("div");
   d.className="net"+(s.fold?" fold":"");d.dataset.s=s.id;d.style.borderLeftColor=col;
   const ch=(k,t)=>t?`<span class="chip"><em>${k}</em>${esc(t)}</span>`:"";
@@ -713,12 +794,13 @@ function netNode(s,i){
         <button class="btn sm danger" data-act="del" title="Eliminar subred">✕</button>
       </span></div>
     <div class="net-info">${ch("Máscara",maskOf(p.len))}${ch("Puerta de enlace",s.gw||"—")}${ch("DNS",s.dns)}
-      ${ch("DHCP",s.dhcpFrom&&s.dhcpTo?s.dhcpFrom+" – "+s.dhcpTo:"")}${ch("Broadcast",n2ip(p.bc))}</div>
+      ${ch("DHCP",s.dhcpFrom&&s.dhcpTo?s.dhcpFrom+" – "+s.dhcpTo:"")}${ch("Broadcast",n2ip(p.bc))}${ch("IPv6",s.v6)}</div>
     ${ov.length?`<div class="net-warn">⚠ Se solapa con ${ov.map(x=>esc(x.cidr)).join(", ")}: dos subredes no deberían compartir direcciones.</div>`:""}
+    ${ov6.length?`<div class="net-warn">⚠ Su prefijo IPv6 se solapa con el de ${ov6.map(x=>esc(x.cidr)).join(", ")}.</div>`:""}
     <div class="net-body"></div>`;
   if(s.fold)return d;
   const body=d.querySelector(".net-body");
-  if(p.len>=24){body.appendChild(cellsNode(s,p.net,p.bc));return d;}
+  if(p.len>=24){body.appendChild(cellsNode(s,p.net,p.bc));if(s.v6)body.appendChild(v6Node(s));return d;}
   const nb=p.size/256;
   for(let b=0;b<nb;b++){
     const lo=p.net+b*256,hi=lo+255,bs=stats(s,lo,hi),open=!!s.open[b];
@@ -729,18 +811,40 @@ function netNode(s,i){
     if(open)w.appendChild(cellsNode(s,lo,hi));
     body.appendChild(w);
   }
+  if(s.v6)body.appendChild(v6Node(s));
   return d;
+}
+// tabla de direcciones IPv6 fijas de una subred (en IPv6 no se dibuja una casilla por IP)
+function hostRows6(s){
+  const ks=Object.keys(s.hosts6);if(s.gw6&&!s.hosts6[s.gw6])ks.push(s.gw6);
+  return ks.map(a=>({a,n:ip6n(a)})).sort((x,y)=>x.n<y.n?-1:x.n>y.n?1:0).map(({a})=>{
+    const h=s.hosts6[a]||{st:"",name:"",type:"",mac:"",note:""};
+    return {ip:a,k:a===s.gw6?"gw":h.st,est:a===s.gw6?"Puerta de enlace":ST[h.st].n,name:h.name,type:h.name?TYPES[h.type]||"":"",mac:h.mac,note:(h.note||"").replace(/\r?\n/g," "),doc:!!s.hosts6[a]};
+  });
+}
+function v6Node(s){
+  const w=document.createElement("div");w.className="v6";
+  const rows=hostRows6(s),nf=Object.keys(s.hosts6).length;
+  w.innerHTML=`<div class="v6h"><b>IPv6</b><span class="p6">${s.v6}</span>${s.gw6?`<span class="chip"><em>Enlace</em>${s.gw6}</span>`:""}
+      <span class="cnt">${nf} dirección${nf===1?"":"es"} fija${nf===1?"":"s"}</span><span style="flex:1"></span>
+      <button class="btn sm" data-act="add6">＋ Dirección IPv6</button></div>`+
+    (rows.length?`<table class="v6t"><tr><th>Dirección</th><th>Estado</th><th>Equipo</th><th>Tipo</th><th>MAC</th><th>Nota</th><th></th></tr>
+      ${rows.map(r=>`<tr data-a6="${r.ip}"><td class="a">${r.ip}</td><td><span class="st" style="color:${ST[r.k].c};border-color:${ST[r.k].c}">${r.est}</span></td>
+        <td>${esc(r.name)}</td><td>${esc(r.type)}</td><td>${esc(r.mac)}</td><td>${esc(r.note.length>60?r.note.slice(0,60)+"…":r.note)}</td>
+        <td>${r.doc?`<button data-act="ed6" data-a6="${r.ip}" title="Editar">✎</button>`:""}</td></tr>`).join("")}</table>`
+    :`<div class="hint">Sin direcciones IPv6 fijas. Los equipos que toman su IPv6 por SLAAC o DHCPv6 no hace falta apuntarlos.</div>`);
+  return w;
 }
 function cellsNode(s,lo,hi){
   const g=document.createElement("div");g.className="cells";
-  const cols=Math.min(16,hi-lo+1),f=cellFn(s);
+  const cols=Math.min(16,hi-lo+1),f=cellFn(s),natIps=new Set(S.nat.map(r=>r.int));
   g.style.gridTemplateColumns=`40px repeat(${cols},var(--cs))`;
   let h="";
   for(let n=lo;n<=hi;n++){
     if((n-lo)%cols===0)h+=`<span class="rl">.${n&255}</span>`;
     const k=f(n),key=s.id+"|"+n;
     const has=k==="gw"&&s.hosts[n2ip(n)];
-    h+=`<div class="c s-${k}${has?" has":""}${hits.has(key)?" hit":""}" data-s="${s.id}" data-n="${n}">${n&255}</div>`;
+    h+=`<div class="c s-${k}${has?" has":""}${natIps.has(n2ip(n))?" nat":""}${hits.has(key)?" hit":""}" data-s="${s.id}" data-n="${n}">${n&255}</div>`;
   }
   g.innerHTML=h;
   return g;
@@ -759,6 +863,11 @@ function renderSide(){
     return `<button class="si" data-sgo="${s.id}" title="${esc(s.name)}"><i style="background:${v?v.color:"#8797b5"}"></i>
       <span class="cidr">${s.cidr}</span><span class="k">${v?"VLAN "+v.vid+" · ":""}${pc}%</span>${barHTML(st)}</button>`;
   }).join(""):'<div class="sempty">Sin subredes.</div>';
+  $("#nlist").innerHTML=S.nat.length?S.nat.slice().sort((a,b)=>(ip2n(a.ext)||0)-(ip2n(b.ext)||0)||pRange(a.extPort)[0]-pRange(b.extPort)[0]).map(r=>{
+    const w=natWarn(r);
+    return `<button class="nr${w.length?" warn":""}" data-nat="${r.id}"><b>${natLabel(r)}</b> → <b>${r.int}${r.intPort?":"+r.intPort:""}</b>${w.length?" ⚠":""}
+      <small>${esc(r.desc)}${w.length?(r.desc?" · ":"")+esc(w.join(" · ")):""}</small></button>`;}).join("")
+    :'<div class="sempty">Sin reglas. Documenta aquí qué se publica hacia Internet (solo se apunta, no se configura nada).</div>';
   $("#ilist").innerHTML=S.inventory.length?S.inventory.map(i=>
     `<div class="inv"><span class="n">${esc(i.name)}</span><button class="btn sm acc" data-give="${i.id}">Dar IP</button><button class="x" data-idel="${i.id}" title="Quitar de la lista">✕</button>
       <small>${esc(TYPES[i.type])}${i.ip?" · en RackScope: "+esc(i.ip):""}${i.note?" · "+esc(i.note):""}</small></div>`).join("")
@@ -775,6 +884,7 @@ function showTip(node){
   if(h&&h.mac)t+=`<div class="fr">${esc(h.mac)}</div>`;
   if(h&&h.note)t+=`<div class="fr">${esc(h.note.length>90?h.note.slice(0,90)+"…":h.note)}</div>`;
   if(!h&&k==="libre")t+=`<div class="fr">Clic para asignarla</div>`;
+  natOf(ip).forEach(r=>t+=`<div class="fr" style="color:#22d3ee">NAT: ${natLabel(r)} → aquí${r.intPort?":"+r.intPort:""}</div>`);
   tip.innerHTML=t;tip.classList.add("on");
   const r=node.getBoundingClientRect();
   let x=r.right+10,y=r.top-6;
@@ -821,7 +931,7 @@ function openCell(sid,n,node,focus){
         <div class="fld"><label>Tipo</label><select id="p_type">${Object.entries(TYPES).map(([a,b])=>`<option value="${a}"${x.type===a?" selected":""}>${b}</option>`).join("")}</select></div>
         <div class="fld"><label>MAC</label><input id="p_mac" class="mono" value="${esc(x.mac)}" placeholder="00:11:22:33:44:55"></div>
       </div>
-      <div class="fld"><label>Nota</label><textarea id="p_note" placeholder="Ubicación, servicio, responsable…">${esc(x.note)}</textarea></div>`+histHTML(ip);
+      <div class="fld"><label>Nota</label><textarea id="p_note" placeholder="Ubicación, servicio, responsable…">${esc(x.note)}</textarea></div>`+six6(h)+natHTML(ip)+histHTML(ip);
     $("#popF").style.display="";
     $("#popAs").textContent=h&&h.st==="asig"?"Guardar":"Asignar";
     $("#popRs").textContent=h&&h.st==="resv"?"Guardar reserva":"Reservar";
@@ -865,6 +975,12 @@ function releaseCell(){
   toastUndo(ip+" liberada.",snap);
 }
 $("#popAs").onclick=()=>commitCell("asig");
+$("#popB").addEventListener("click",ev=>{
+  const a=ev.target.closest("[data-natp]");
+  if(a){ev.preventDefault();const r=S.nat.find(x=>x.id===a.dataset.natp);closePop();editNat(r);return;}
+  const b=ev.target.closest("[data-natnew]");
+  if(b){const ip=b.dataset.natnew;closePop();editNat(null,ip);}
+});
 $("#popRs").onclick=()=>commitCell("resv");
 $("#popFr").onclick=releaseCell;
 $("#popX").onclick=closePop;
@@ -901,6 +1017,22 @@ function histHTML(ip){
   if(!l.length)return "";
   const f=t=>new Date(t).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
   return `<div class="hist"><label>Historial</label>${l.map(x=>`<div><span>${f(x.t)}</span> · ${esc(x.act)}${x.name?" · "+esc(x.name):""}${x.mac?" <span>"+esc(x.mac)+"</span>":""}</div>`).join("")}</div>`;
+}
+// IPv6 del mismo equipo (por nombre) y reglas NAT de una IP, para la ficha
+function six6(h){
+  if(!h||!h.name)return "";
+  const nm=h.name.toLowerCase(),out=[];
+  S.subnets.forEach(x=>Object.keys(x.hosts6).forEach(a=>{if(x.hosts6[a].name.toLowerCase()===nm)out.push(a);}));
+  return out.length?`<div class="ctx">IPv6: ${out.join(", ")}</div>`:"";
+}
+function natHTML(ip){
+  const l=natOf(ip);
+  return `<div class="hist"><label>Publicada hacia fuera (NAT)</label>${l.map(r=>`<div><a href="#" data-natp="${r.id}">${natLabel(r)}</a> → aquí${r.intPort?":"+r.intPort:""} <span>${esc(r.desc)}</span></div>`).join("")||'<div><span>Ninguna regla apunta a esta IP</span></div>'}
+    <button class="btn sm" data-natnew="${ip}">＋ Regla NAT para esta IP</button></div>`;
+}
+function flash6(sid,a){
+  const r=netsEl.querySelector(`.net[data-s="${sid}"] tr[data-a6="${a}"]`);
+  if(r){r.scrollIntoView({block:"center",behavior:"smooth"});r.classList.remove("flash");void r.offsetWidth;r.classList.add("flash");}
 }
 function flash(c){c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash");}
 // despliega lo necesario para que la IP este en pantalla
@@ -954,6 +1086,8 @@ function handleAct(btn){
   }
   if(act==="edit")editSubnet(s);
   if(act==="split")splitSubnet(s);
+  if(act==="add6")edit6(s,null);
+  if(act==="ed6")edit6(s,btn.dataset.a6);
   if(act==="up"&&i>0){S.subnets.splice(i,1);S.subnets.splice(i-1,0,s);save();render();}
   if(act==="down"&&i<S.subnets.length-1){S.subnets.splice(i,1);S.subnets.splice(i+1,0,s);save();render();}
   if(act==="del"){
@@ -1080,15 +1214,23 @@ function searchHits(q){
               (looksMac&&h.mac&&h.mac.replace(/:/g,"").toLowerCase().includes(qh));
       if(m)out.push({s,n});
     });
+    const q6=ip6n(q),hex6=/^[0-9a-f:]+$/.test(ql)&&ql.includes(":");
+    Object.keys(s.hosts6).forEach(a=>{
+      const h=s.hosts6[a];
+      if((q6!=null&&ip6n(a)===q6)||(hex6&&a.includes(ql))||(h.name&&h.name.toLowerCase().includes(ql))||
+         (looksMac&&h.mac&&h.mac.replace(/:/g,"").toLowerCase().includes(qh)))out.push({s,a6:a});
+    });
   });
-  return out.sort((a,b)=>S.subnets.indexOf(a.s)-S.subnets.indexOf(b.s)||a.n-b.n);
+  S.nat.forEach(r=>{if((r.ext&&r.ext.includes(q))||(r.desc&&r.desc.toLowerCase().includes(ql)))out.push({nat:r});});
+  const ord=x=>x.nat?1e9:S.subnets.indexOf(x.s);
+  return out.sort((a,b)=>ord(a)-ord(b)||(a.a6?1:0)-(b.a6?1:0)||(a.n||0)-(b.n||0));
 }
 function runSearch(){
   q=search.value.trim();
   hits=new Set();sresList=[];sresCur=0;
   if(!q){clearSearch();return;}
   sresList=searchHits(q);
-  sresList.forEach(x=>hits.add(x.s.id+"|"+x.n));
+  sresList.forEach(x=>{if(x.s&&x.n!=null)hits.add(x.s.id+"|"+x.n);});
   document.body.classList.toggle("searching",hits.size>0);
   render();
   drawSres();
@@ -1097,6 +1239,10 @@ function drawSres(){
   if(!q){sres.classList.remove("on");return;}
   const list=sresList.slice(0,40);
   sres.innerHTML=list.length?list.map((x,i)=>{
+    const cur=i===sresCur?' class="cur"':"";
+    if(x.nat)return `<button data-i="${i}"${cur}><b>${natLabel(x.nat)}</b>→ ${x.nat.int}${x.nat.intPort?":"+x.nat.intPort:""}<small>Regla NAT${x.nat.desc?" · "+esc(x.nat.desc):""}</small></button>`;
+    if(x.a6){const h=x.s.hosts6[x.a6],v6=vlanOf(x.s);
+      return `<button data-i="${i}"${cur}><b>${x.a6}</b>${esc(h.name||ST[h.st].n)}<small>${v6?"VLAN "+v6.vid+" · "+esc(v6.name)+" · ":""}${x.s.v6} · IPv6</small></button>`;}
     const ip=n2ip(x.n),h=x.s.hosts[ip],k=cellFn(x.s)(x.n),v=vlanOf(x.s);
     return `<button data-i="${i}"${i===sresCur?' class="cur"':""}><b>${ip}</b>${esc(h&&h.name?h.name:ST[k].n)}${h&&h.mac?" · "+esc(h.mac):""}
       <small>${v?"VLAN "+v.vid+" · "+esc(v.name)+" · ":""}${x.s.cidr} · ${ST[k].n}</small></button>`;
@@ -1110,6 +1256,8 @@ function drawSres(){
 function pickResult(i,withPop){
   const x=sresList[i];if(!x)return;
   sres.classList.remove("on");
+  if(x.nat){editNat(x.nat);return;}
+  if(x.a6){if(x.s.fold){x.s.fold=false;save();render();}flash6(x.s.id,x.a6);return;}
   goTo(x.s.id,x.n,withPop);
 }
 function clearSearch(){
@@ -1184,7 +1332,7 @@ function editSubnet(s){
   const isNew=!s;
   if(isNew&&!S.vlans.length&&!confirm("Todavía no hay ninguna VLAN en esta sede. ¿Crear la subred sin VLAN? (Cancelar para crear antes la VLAN)")){editVlan(null);return;}
   const vs=vlansSorted();
-  s=s||{id:nid("n"),cidr:"",name:"",vlan:vs.length?vs[0].id:"",gw:"",dns:"",dhcpFrom:"",dhcpTo:"",hosts:{},open:{},fold:false};
+  s=s||{id:nid("n"),cidr:"",name:"",vlan:vs.length?vs[0].id:"",gw:"",dns:"",dhcpFrom:"",dhcpTo:"",hosts:{},open:{},fold:false,v6:"",gw6:"",hosts6:{}};
   modal.innerHTML=`<h3>${isNew?"Nueva subred":"Editar subred "+esc(s.cidr)}</h3>
   <div class="body">
     <div class="grid2">
@@ -1201,6 +1349,10 @@ function editSubnet(s){
     <div class="grid2">
       <div class="fld"><label>DHCP desde (opcional)</label><input id="n_d0" class="mono" value="${esc(s.dhcpFrom)}"></div>
       <div class="fld"><label>DHCP hasta</label><input id="n_d1" class="mono" value="${esc(s.dhcpTo)}"></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label>Prefijo IPv6 (opcional)</label><input id="n_v6" class="mono" value="${esc(s.v6)}" placeholder="2001:db8:10::/64"></div>
+      <div class="fld"><label>Puerta de enlace IPv6</label><input id="n_gw6" class="mono" value="${esc(s.gw6)}" placeholder="2001:db8:10::1"></div>
     </div>
   </div>
   <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button></div>`;
@@ -1240,8 +1392,19 @@ function editSubnet(s){
       if(!util(d0)||!util(d1)){toast("El rango DHCP tiene que estar dentro de "+r.cidr+" (sin red ni broadcast)");return;}
       if(d0>d1){toast("El rango DHCP está al revés: el inicio es mayor que el final");return;}
     }
+    const v6T=$("#n_v6").value.trim(),g6T=$("#n_gw6").value.trim();let r6=null,g6="";
+    if(v6T){r6=parse6(v6T);if(r6.err){toast(r6.err);$("#n_v6").focus();return;}}
+    if(g6T){
+      if(!r6){toast("Escribe antes el prefijo IPv6");$("#n_v6").focus();return;}
+      const n=ip6n(g6T);if(n==null||n<r6.net||n>r6.last){toast("La puerta de enlace IPv6 tiene que estar dentro de "+r6.cidr);$("#n_gw6").focus();return;}
+      g6=n2ip6(n);
+    }
     const ov=S.subnets.filter(x=>x.id!==s.id&&overlap(r,P(x)));
     if(ov.length&&!confirm(`${r.cidr} se solapa con ${ov.map(x=>x.cidr).join(", ")}. ¿Guardar igualmente?`))return;
+    const ov6=r6?S.subnets.filter(x=>x.id!==s.id&&x.v6&&overlap6(r6,P6(x))):[];
+    if(ov6.length&&!confirm(`${r6.cidr} se solapa con el prefijo IPv6 de ${ov6.map(x=>x.cidr).join(", ")}. ¿Guardar igualmente?`))return;
+    const lost6=Object.keys(s.hosts6).filter(a=>{const n=ip6n(a);return !r6||n<r6.net||n>r6.last;});
+    if(lost6.length&&!confirm(`${lost6.length} direcciones IPv6 quedan fuera del prefijo y se perderán. ¿Seguir?`))return;
     const lost=Object.keys(s.hosts).filter(ip=>{const n=ip2n(ip);return n<=r.net||n>=r.bc;});
     if(lost.length&&!confirm(`${lost.length} IPs documentadas quedan fuera de ${r.cidr} y se perderán (${lost.slice(0,5).join(", ")}${lost.length>5?"…":""}). ¿Seguir?`))return;
     const changed=s.cidr!==r.cidr;
@@ -1249,6 +1412,7 @@ function editSubnet(s){
     s.cidr=r.cidr;s.vlan=$("#n_vlan").value;s.name=$("#n_name").value.trim();
     s.gw=gw!=null?n2ip(gw):"";s.dns=dns.map(x=>n2ip(ip2n(x))).join(", ");
     s.dhcpFrom=d0!=null?n2ip(d0):"";s.dhcpTo=d1!=null?n2ip(d1):"";
+    lost6.forEach(a=>delete s.hosts6[a]);s.v6=r6?r6.cidr:"";s.gw6=g6;
     if(changed)s.open=r.len<24?{0:true}:{};
     if(isNew)S.subnets.push(s);
     save();closeModal();render();
@@ -1289,7 +1453,7 @@ function splitSubnet(s){
     $("#x_prev").innerHTML=`<table style="width:100%;font-size:11.5px;font-family:var(--m);border-collapse:collapse">
       <tr style="color:var(--tx3);text-align:left"><th>Subred</th><th>Rango útil</th><th>Broadcast</th><th>Con datos</th></tr>
       ${pl.map(x=>`<tr><td>${x.cidr}</td><td>${n2ip(x.net+1)} – ${n2ip(x.bc-1)}</td><td>${n2ip(x.bc)}</td><td>${x.hosts.length}</td></tr>`).join("")}</table>
-      <div class="hint" style="margin-top:8px">Máscara <b>${maskOf(pl[0].len)}</b>. Cada parte conserva la VLAN, los DNS y el trozo del rango DHCP que le toque; la puerta de enlace se queda en la parte donde cae y el resto se quedan sin ella.</div>
+      <div class="hint" style="margin-top:8px">Máscara <b>${maskOf(pl[0].len)}</b>. Cada parte conserva la VLAN, los DNS y el trozo del rango DHCP que le toque; la puerta de enlace se queda en la parte donde cae y el resto se quedan sin ella.${s.v6?" El prefijo IPv6 y sus direcciones se quedan en la primera parte.":""}</div>
       ${lost.length?`<div class="hint bad" style="margin-top:6px">⚠ ${lost.length} IP(s) pasarían a ser red o broadcast y se perderían: ${esc(lost.slice(0,6).join(", "))}${lost.length>6?"…":""}</div>`:""}`;
   };
   $("#x_len").onchange=prev;prev();
@@ -1300,7 +1464,8 @@ function splitSubnet(s){
     const snap=snapDB(),g=ip2n(s.gw),d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo);
     const parts=pl.map((x,k)=>{
       const n={id:nid("n"),cidr:x.cidr,name:s.name?s.name+" ("+(k+1)+"/"+pl.length+")":"",vlan:s.vlan,
-        gw:g!=null&&g>x.net&&g<x.bc?s.gw:"",dns:s.dns,dhcpFrom:"",dhcpTo:"",hosts:{},open:x.len<24?{0:true}:{},fold:false};
+        gw:g!=null&&g>x.net&&g<x.bc?s.gw:"",dns:s.dns,dhcpFrom:"",dhcpTo:"",hosts:{},open:x.len<24?{0:true}:{},fold:false,
+        v6:k===0?s.v6:"",gw6:k===0?s.gw6:"",hosts6:k===0?s.hosts6:{}};
       if(d0!=null&&d1!=null){const a=Math.max(d0,x.net+1),b=Math.min(d1,x.bc-1);if(a<=b){n.dhcpFrom=n2ip(a);n.dhcpTo=n2ip(b);}}
       x.hosts.forEach(ip=>{if(!x.lost.includes(ip))n.hosts[ip]=s.hosts[ip];});
       return n;
@@ -1311,10 +1476,176 @@ function splitSubnet(s){
   };
 }
 
+/* ---------- IPv6: direccion fija ---------- */
+function next6(s){const p=P6(s);for(let i=1n;i<65536n;i++){const n=p.net+i;if(n>p.last)break;const a=n2ip6(n);if(a!==s.gw6&&!s.hosts6[a])return a;}return "";}
+function edit6(s,addr){
+  const isNew=!addr,h=addr?s.hosts6[addr]:null,x=h||{st:"asig",name:"",type:"servidor",mac:"",note:""};
+  const names=[...new Set(Object.values(s.hosts).map(y=>y.name).filter(Boolean))];
+  modal.innerHTML=`<h3>${isNew?"Nueva dirección IPv6":"Dirección IPv6"}</h3>
+  <div class="body">
+    <div class="ctx">${esc(s.cidr)} · ${s.v6}</div>
+    <div class="fld"><label>Dirección</label><input id="a6_ip" class="mono" value="${addr||next6(s)}" autocomplete="off"></div>
+    <div class="grid2">
+      <div class="fld"><label>Equipo</label><input id="a6_name" list="names6" value="${esc(x.name)}" placeholder="srv-app-01…" autocomplete="off"><datalist id="names6">${names.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></div>
+      <div class="fld"><label>Estado</label><select id="a6_st"><option value="asig"${x.st!=="resv"?" selected":""}>Asignada</option><option value="resv"${x.st==="resv"?" selected":""}>Reservada</option></select></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label>Tipo</label><select id="a6_type">${Object.entries(TYPES).map(([a,b])=>`<option value="${a}"${x.type===a?" selected":""}>${b}</option>`).join("")}</select></div>
+      <div class="fld"><label>MAC</label><input id="a6_mac" class="mono" value="${esc(x.mac)}" placeholder="00:11:22:33:44:55"></div>
+    </div>
+    <div class="fld"><label>Nota</label><textarea id="a6_note">${esc(x.note)}</textarea></div>
+    <div class="hint">Se guarda en su forma corta (RFC 5952). Si eliges un equipo que ya tiene IPv4 en esta subred, se copian su tipo y su MAC.</div>
+    ${addr?histHTML(addr):""}
+  </div>
+  <div class="foot">${isNew?"":'<button class="btn danger" id="m_del">Liberar</button>'}<span style="flex:1"></span><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button></div>`;
+  veil.classList.add("on");
+  $("#a6_name").addEventListener("change",()=>{const nm=$("#a6_name").value.trim().toLowerCase();
+    const e=Object.values(s.hosts).find(y=>y.name.toLowerCase()===nm);if(e){$("#a6_type").value=e.type;if(!$("#a6_mac").value)$("#a6_mac").value=e.mac;}});
+  setTimeout(()=>{const n=$(isNew?"#a6_name":"#a6_note");if(n)n.focus();},40);
+  $("#m_cancel").onclick=closeModal;
+  if(!isNew)$("#m_del").onclick=()=>{const snap=snapDB();logIp(addr,"liberada",h);delete s.hosts6[addr];save();closeModal();render();toastUndo(addr+" liberada.",snap);};
+  $("#m_ok").onclick=()=>{
+    const p=P6(s),n=ip6n($("#a6_ip").value);
+    if(n==null){toast("Dirección IPv6 no válida");$("#a6_ip").focus();return;}
+    if(n<p.net||n>p.last){toast("La dirección tiene que estar dentro de "+s.v6);$("#a6_ip").focus();return;}
+    const a=n2ip6(n);
+    if(a!==addr&&s.hosts6[a]){toast(a+" ya está documentada");return;}
+    let mac=$("#a6_mac").value.trim();if(mac){const m=normMac(mac);if(!m){toast("MAC no válida: usa el formato 00:11:22:33:44:55");return;}mac=m;}
+    const name=$("#a6_name").value.trim(),st=$("#a6_st").value==="resv"?"resv":"asig";
+    if(st==="asig"&&!name){toast("Escribe el nombre del equipo");$("#a6_name").focus();return;}
+    if(addr&&a!==addr)delete s.hosts6[addr];
+    s.hosts6[a]={st,name,type:$("#a6_type").value,mac,note:$("#a6_note").value.trim()};
+    logIp(a,isNew?(st==="asig"?"asignada":"reservada"):"modificada",{name,mac});
+    save();closeModal();render();flash6(s.id,a);toast(a+" guardada");
+  };
+  modal.onkeydown=ev=>{if(ev.key==="Enter"&&ev.target.tagName!=="TEXTAREA")$("#m_ok").click();};
+}
+
+/* ---------- IPv6: un /64 para cada subred a partir del prefijo de la sede ---------- */
+function plan6(){
+  if(!S.subnets.length){toast("Crea antes alguna subred");return;}
+  modal.innerHTML=`<h3>Plan IPv6</h3>
+  <div class="body">
+    <div class="hint">Escribe el prefijo que te da el operador (normalmente un /48 o un /56) y se propone un /64 para cada subred. Con un /48 se usa el ID de VLAN como identificador de subred (VLAN 10 → …:10::/64), que es lo más fácil de recordar.</div>
+    <div class="grid2">
+      <div class="fld"><label>Prefijo de la sede</label><input id="p6_base" class="mono" placeholder="2001:db8:a10::/48" autocomplete="off"></div>
+      <div class="fld"><label>Subredes que ya tienen IPv6</label><select id="p6_keep"><option value="keep">Mantener su prefijo</option><option value="all">Proponer de nuevo</option></select></div>
+    </div>
+    <div id="p6_prev"></div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cerrar</button><button class="btn acc" id="m_ok" disabled>Aplicar</button></div>`;
+  veil.classList.add("on");
+  let plan=[];
+  const calc=()=>{
+    const t=$("#p6_base").value.trim(),r=parse6(t),box=$("#p6_prev");plan=[];$("#m_ok").disabled=true;
+    if(!t){box.innerHTML="";return;}
+    if(r.err){box.innerHTML=`<div class="hint bad">${esc(r.err)}</div>`;return;}
+    if(r.len>64){box.innerHTML='<div class="hint bad">Tiene que ser un /64 o más grande (/48, /56…)</div>';return;}
+    const cap=1n<<BigInt(64-r.len),keep=$("#p6_keep").value==="keep",used=new Set();
+    S.subnets.forEach(s=>{if(keep&&s.v6){const x=P6(s);if(x.len===64&&x.net>=r.net&&x.net<=r.last)used.add(((x.net-r.net)>>64n).toString());}});
+    let seq=0n;
+    S.subnets.forEach(s=>{
+      if(keep&&s.v6){plan.push({s,v6:s.v6,keep:true});return;}
+      const v=vlanOf(s);let id=null;
+      if(v&&r.len<=48){const h=BigInt("0x"+v.vid);if(h<cap&&!used.has(h.toString()))id=h;}
+      if(id==null){while(used.has(seq.toString()))seq++;if(seq>=cap){plan.push({s,v6:"",full:true});return;}id=seq;}
+      used.add(id.toString());
+      plan.push({s,v6:n2ip6(r.net+(id<<64n))+"/64"});
+    });
+    const nuevos=plan.filter(x=>!x.keep&&x.v6),pierde=nuevos.reduce((a,x)=>{const q6=parse6(x.v6);return a+Object.keys(x.s.hosts6).filter(k=>{const n=ip6n(k);return n<q6.net||n>q6.last;}).length;},0);
+    box.innerHTML=`<table style="width:100%;font-size:11.5px;font-family:var(--m);border-collapse:collapse"><tr style="color:var(--tx3);text-align:left"><th>Subred</th><th>VLAN</th><th>IPv6</th></tr>
+      ${plan.map(x=>{const v=vlanOf(x.s);return `<tr><td>${x.s.cidr}</td><td>${v?v.vid:"—"}</td><td>${x.full?'<span class="bad">no caben más /64</span>':x.v6+(x.keep?' <span style="color:var(--tx3)">(se mantiene)</span>':"")}</td></tr>`;}).join("")}</table>
+      <div class="hint" style="margin-top:8px">${r.cidr} da para ${64-r.len>=20?"más de un millón de":fmt(2**(64-r.len))} subredes /64. Cada una recibe también su puerta de enlace ::1.${pierde?` <span class="bad">${pierde} direcciones IPv6 fijas quedan fuera de su nuevo prefijo y se perderán.</span>`:""}</div>`;
+    $("#m_ok").disabled=!nuevos.length;
+  };
+  $("#p6_base").addEventListener("input",calc);$("#p6_keep").onchange=calc;
+  setTimeout(()=>{const n=$("#p6_base");if(n)n.focus();},40);
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const snap=snapDB();let k=0;
+    plan.forEach(x=>{if(x.keep||!x.v6)return;const r=parse6(x.v6);
+      Object.keys(x.s.hosts6).forEach(a=>{const n=ip6n(a);if(n<r.net||n>r.last)delete x.s.hosts6[a];});
+      x.s.v6=r.cidr;x.s.gw6=n2ip6(r.net+1n);k++;});
+    save();closeModal();render();toastUndo(k+" subredes con prefijo IPv6.",snap);
+  };
+}
+
+/* ---------- reglas NAT: solo se documentan, no se configura nada ---------- */
+const PROTOS={tcp:"TCP",udp:"UDP","tcp/udp":"TCP/UDP"};
+function portOk(x){                                 // "443", "5000-5010" o "" (todos); null si no vale
+  x=str(x).trim();if(!x)return "";
+  const m=/^(\d{1,5})(?:\s*-\s*(\d{1,5}))?$/.exec(x);if(!m)return null;
+  const a=+m[1],b=m[2]?+m[2]:a;
+  return a<1||b>65535||a>b?null:(a===b?String(a):a+"-"+b);
+}
+const pRange=x=>{if(!x)return [1,65535];const r=x.split("-").map(Number);return [r[0],r[1]||r[0]];};
+const natLabel=r=>`${r.ext||"WAN"}${r.extPort?":"+r.extPort:""}/${PROTOS[r.proto]}`;
+const natOf=ip=>S.nat.filter(r=>r.int===ip);
+// reglas que usan el mismo puerto publico (misma IP publica, protocolo compatible y puertos que se pisan)
+function natClash(r,list){
+  const [a,b]=pRange(r.extPort);
+  return list.filter(x=>{if(x.id===r.id||(x.ext&&r.ext&&x.ext!==r.ext))return false;   // vacia = la WAN: puede ser cualquiera
+    if(x.proto!=="tcp/udp"&&r.proto!=="tcp/udp"&&x.proto!==r.proto)return false;
+    const [c,d]=pRange(x.extPort);return a<=d&&c<=b;});
+}
+function natWarn(r){
+  const w=[];if(natClash(r,S.nat).length)w.push("puerto público repetido");
+  const n=ip2n(r.int),s=n!=null?subnetOfIp(n):null;
+  if(!s)w.push("IP interna fuera de las subredes");
+  else{const k=cellFn(s)(n);if(k==="libre"||k==="dhcp")w.push("IP interna sin documentar");}
+  return w;
+}
+function editNat(rule,preIp){
+  const isNew=!rule,r=rule||{id:nid("t"),ext:"",extPort:"",proto:"tcp",int:preIp||"",intPort:"",desc:""};
+  modal.innerHTML=`<h3>${isNew?"Nueva regla NAT":"Regla NAT"}</h3>
+  <div class="body">
+    <div class="hint">Solo se documenta: SubnetScope no se conecta al firewall ni cambia nada en él.</div>
+    <div class="grid2">
+      <div class="fld"><label>IP pública (vacío = la WAN)</label><input id="t_ext" class="mono" value="${esc(r.ext)}" placeholder="203.0.113.10"></div>
+      <div class="fld"><label>Puerto público (vacío = todos)</label><input id="t_ep" class="mono" value="${esc(r.extPort)}" placeholder="443 o 5000-5010"></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label>IP interna</label><input id="t_int" class="mono" value="${esc(r.int)}" placeholder="192.168.10.41"></div>
+      <div class="fld"><label>Puerto interno (vacío = el mismo)</label><input id="t_ip" class="mono" value="${esc(r.intPort)}"></div>
+    </div>
+    <div class="hint" id="t_info"></div>
+    <div class="grid2">
+      <div class="fld"><label>Protocolo</label><select id="t_pr">${Object.entries(PROTOS).map(([k,v])=>`<option value="${k}"${r.proto===k?" selected":""}>${v}</option>`).join("")}</select></div>
+      <div class="fld"><label>Descripción</label><input id="t_desc" value="${esc(r.desc)}" placeholder="Web corporativa, VPN…"></div>
+    </div>
+  </div>
+  <div class="foot">${isNew?"":'<button class="btn danger" id="m_del">Eliminar</button>'}<span style="flex:1"></span><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok">Guardar</button></div>`;
+  veil.classList.add("on");
+  const info=()=>{const n=ip2n($("#t_int").value),sb=n!=null?subnetOfIp(n):null,h=sb&&sb.hosts[n2ip(n)];
+    $("#t_info").innerHTML=n==null?"":sb?`${n2ip(n)} · ${sb.cidr} · ${h&&h.name?"<b>"+esc(h.name)+"</b>":'<span class="bad">sin equipo documentado</span>'}`
+      :'<span class="bad">Esa IP no está en ninguna subred de esta sede</span>';};
+  $("#t_int").addEventListener("input",info);info();
+  setTimeout(()=>{const n=$(isNew&&!preIp?"#t_ext":"#t_ep");if(n)n.focus();},40);
+  $("#m_cancel").onclick=closeModal;
+  if(!isNew)$("#m_del").onclick=()=>{const snap=snapDB();S.nat=S.nat.filter(x=>x.id!==r.id);save();closeModal();render();toastUndo("Regla NAT eliminada.",snap);};
+  $("#m_ok").onclick=()=>{
+    const extT=$("#t_ext").value.trim(),ext=extT?ip2n(extT):null;
+    if(extT&&ext==null){toast("IP pública no válida");$("#t_ext").focus();return;}
+    const ep=portOk($("#t_ep").value),ip=portOk($("#t_ip").value),int=ip2n($("#t_int").value);
+    if(ep==null||ip==null){toast("Puerto no válido: usa 443 o un rango como 5000-5010");return;}
+    if(int==null){toast("Escribe la IP interna");$("#t_int").focus();return;}
+    const nr={id:r.id,ext:ext!=null?n2ip(ext):"",extPort:ep,proto:has(PROTOS,$("#t_pr").value)?$("#t_pr").value:"tcp",int:n2ip(int),intPort:ip,desc:$("#t_desc").value.trim()};
+    const cl=natClash(nr,S.nat);
+    if(cl.length&&!confirm(`El puerto público ${natLabel(nr)} ya lo usa: ${cl.map(x=>x.desc||x.int).join(", ")}. ¿Guardar igualmente?`))return;
+    if(isNew)S.nat.push(nr);else Object.assign(rule,nr);
+    save();closeModal();render();toast("Regla NAT guardada");
+  };
+  modal.onkeydown=ev=>{if(ev.key==="Enter")$("#m_ok").click();};
+}
+
 /* ---------- panel lateral ---------- */
 $("#vAdd").onclick=()=>editVlan(null);
 $("#nAdd").onclick=()=>editSubnet(null);
+$("#natAdd").onclick=()=>editNat(null);
+$("#v6Plan").onclick=plan6;
 $("#side").addEventListener("click",ev=>{
+  const nt=ev.target.closest("[data-nat]");
+  if(nt){editNat(S.nat.find(r=>r.id===nt.dataset.nat));return;}
   const ed=ev.target.closest("[data-ved]");
   if(ed){editVlan(S.vlans.find(v=>v.id===ed.dataset.ved));return;}
   const vl=ev.target.closest("[data-v]");
@@ -1401,7 +1732,8 @@ stage.addEventListener("scroll",()=>{placePop();hideTip();},{passive:true});
 const lg=$("#legend");
 lg.innerHTML='<b>Estados ▾</b><div class="lgb">'+Object.entries(ST).filter(([k])=>k!=="bc")
   .map(([k,v])=>`<div><span class="c s-${k}"></span>${k==="net"?"Red y broadcast":v.n}</div>`).join("")+
-  '<div title="El punto indica que hay un equipo apuntado en la puerta de enlace"><span class="c s-gw has"></span>Enlace con equipo</div></div>';
+  '<div title="El punto indica que hay un equipo apuntado en la puerta de enlace"><span class="c s-gw has"></span>Enlace con equipo</div>'+
+  '<div title="Alguna regla NAT publica esta IP hacia Internet"><span class="c nat"></span>Con regla NAT</div></div>';
 lg.querySelector("b").onclick=()=>{const b=lg.querySelector(".lgb"),off=b.style.display==="none";b.style.display=off?"":"none";lg.querySelector("b").textContent="Estados "+(off?"▾":"▸");};
 
 /* ---------- exportar ---------- */
@@ -1459,10 +1791,21 @@ function expCSV(){
   scopeSites().forEach(si=>si.state.subnets.forEach(s=>{
     const v=si.state.vlans.find(x=>x.id===s.vlan);
     hostRows(si.state,s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.cidr,r.ip,r.est,r.name,r.type,r.mac,r.note]));
+    if(s.v6)hostRows6(s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.v6,r.ip,r.est,r.name,r.type,r.mac,r.note]));
   }));
   const qq=v=>{let t=String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};   // evita formulas al abrirlo en Excel
   const txt="\uFEFF"+[head,...rows].map(r=>r.map(qq).join(";")).join("\r\n");
   deliver(new Blob([txt],{type:"text/csv;charset=utf-8"}),"ips-"+scopeName()+"-"+stamp()+".csv","txt",txt);
+}
+const csvQ=v=>{let t=String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+function expNAT(){
+  const head=["Sede","IP pública","Puerto público","Protocolo","IP interna","Puerto interno","Equipo","Descripción"],rows=[];
+  scopeSites().forEach(si=>si.state.nat.forEach(r=>{
+    const n=ip2n(r.int),sb=si.state.subnets.find(s=>{const p=P(s);return n>=p.net&&n<=p.bc;}),h=sb&&sb.hosts[r.int];
+    rows.push([si.name,r.ext||"WAN",r.extPort||"todos",PROTOS[r.proto],r.int,r.intPort||r.extPort||"todos",h?h.name:"",r.desc]);}));
+  if(!rows.length){toast("No hay reglas NAT documentadas");return;}
+  const txt="\uFEFF"+[head,...rows].map(r=>r.map(csvQ).join(";")).join("\r\n");
+  deliver(new Blob([txt],{type:"text/csv;charset=utf-8"}),"nat-"+scopeName()+"-"+stamp()+".csv","txt",txt);
 }
 function expJSON(){
   save();
@@ -1493,10 +1836,10 @@ function planCanvas(groups,maxPx){
   groups.forEach(gp=>{
     if(gp.title){T(PAD,y+20,gp.title,20,"#0f172a",700);y+=38;}
     gp.subnets.forEach(s=>{
-      const v=gp.vlans.find(x=>x.id===s.vlan),p=P(s),st=stats(s),f=cellFn(s);
+      const v=gp.vlans.find(x=>x.id===s.vlan),p=P(s),st=stats(s),f=cellFn(s),natIps=new Set((gp.nat||[]).map(r=>r.int));
       B(PAD,y,6,38,v?v.color:"#94a3b8");
       T(PAD+14,y+15,`${s.cidr}   ${v?"VLAN "+v.vid+" · "+v.name:"sin VLAN"}${s.name?"   —   "+s.name:""}`,14,"#0f172a",700);
-      T(PAD+14,y+33,`${counterText(st)} · quedan ${fmt(st.free)} libres · máscara ${maskOf(p.len)}${s.gw?" · enlace "+s.gw:""}${s.dhcpFrom?" · DHCP "+s.dhcpFrom+" – "+s.dhcpTo:""}`,11,"#475569");
+      T(PAD+14,y+33,`${counterText(st)} · quedan ${fmt(st.free)} libres · máscara ${maskOf(p.len)}${s.gw?" · enlace "+s.gw:""}${s.dhcpFrom?" · DHCP "+s.dhcpFrom+" – "+s.dhcpTo:""}${s.v6?" · IPv6 "+s.v6:""}`,11,"#475569");
       y+=50;
       drawBlocks(s).forEach(bk=>{
         if(bk.skip){T(PAD,y+12,`… ${bk.skip} bloque(s) /24 sin uso que no se dibujan`,11,"#64748b");y+=22;return;}
@@ -1506,6 +1849,7 @@ function planCanvas(groups,maxPx){
           const i=n-bk.lo,cl=i%cols,x=PAD+LW+cl*(CS+GP),yy=y+Math.floor(i/cols)*(CS+GP);
           if(cl===0)T(PAD+LW-7,yy+CS/2+4,"."+(n&255),9,"#64748b",400,"right");
           const k=f(n),cc=CK[k];B(x,yy,CS,CS,cc[0],cc[1]);
+          if(natIps.has(n2ip(n)))ops.push(c=>{c.fillStyle="#0891b2";c.fillRect(x,yy,6,6);});
           if(k==="gw"&&s.hosts[n2ip(n)])ops.push(c=>{c.fillStyle="#0f172a";c.beginPath();c.arc(x+CS-3.5,yy+3.5,2.6,0,7);c.fill();});
           T(x+CS/2,yy+CS/2+3.5,String(n&255),8.5,"#1e293b",600,"center");
         }
@@ -1518,6 +1862,7 @@ function planCanvas(groups,maxPx){
   Object.entries(ST).filter(([k])=>k!=="bc").forEach(([k,v])=>{
     B(lx,y,14,14,CK[k][0],CK[k][1]);const t=k==="net"?"Red y broadcast":v.n;T(lx+19,y+11,t,10.5,"#334155",600);lx+=34+t.length*6;
   });
+  if(groups.some(g=>(g.nat||[]).length)){B(lx,y,14,14,CK.libre[0],CK.libre[1]);B(lx,y,6,6,"#0891b2");T(lx+19,y+11,"Con regla NAT",10.5,"#334155",600);}
   y+=14+PAD;
   const sc=Math.max(.5,Math.min(2,Math.sqrt((maxPx||8e6)/(W*y))));
   const c=document.createElement("canvas");
@@ -1529,7 +1874,7 @@ function planCanvas(groups,maxPx){
   c._w=W;
   return c;
 }
-const groupsOf=sites=>sites.map(si=>({title:sites.length>1?si.name:"",subnets:si.state.subnets,vlans:si.state.vlans}));
+const groupsOf=sites=>sites.map(si=>({title:sites.length>1?si.name:"",subnets:si.state.subnets,vlans:si.state.vlans,nat:si.state.nat}));
 function withState(st,fn){const prev=S;S=st;try{return fn();}finally{S=prev;}}
 function expPNG(){
   toast("Generando imagen…");
@@ -1555,18 +1900,25 @@ function expPDF(){
           return `<tr><td><span class="sw" style="background:${v.color}"></span>${v.vid}</td><td>${esc(v.name)}</td><td>${esc(v.desc)}</td>
             <td>${ns.map(s=>s.cidr).join("<br>")||"—"}</td><td>${ns.reduce((a,s)=>a+stats(s).used,0)}</td></tr>`;}).join("")}</table>
         <h2>Resumen de subredes</h2>
-        <table><tr><th>Subred</th><th>VLAN</th><th>Nombre</th><th>Máscara</th><th>Puerta de enlace</th><th>DNS</th><th>DHCP</th><th>Uso</th></tr>
+        <table><tr><th>Subred</th><th>VLAN</th><th>Nombre</th><th>Máscara</th><th>Puerta de enlace</th><th>DNS</th><th>DHCP</th><th>IPv6</th><th>Uso</th></tr>
         ${st.subnets.map(s=>{const v=st.vlans.find(x=>x.id===s.vlan),sx=stats(s);
           return `<tr><td>${s.cidr}</td><td>${v?v.vid+" · "+esc(v.name):"—"}</td><td>${esc(s.name)}</td><td>${maskOf(P(s).len)}</td><td>${esc(s.gw||"—")}</td>
-            <td>${esc(s.dns||"—")}</td><td>${s.dhcpFrom?esc(s.dhcpFrom+" – "+s.dhcpTo):"—"}</td><td>${counterText(sx)} · ${sx.free} libres</td></tr>`;}).join("")}</table>`;
+            <td>${esc(s.dns||"—")}</td><td>${s.dhcpFrom?esc(s.dhcpFrom+" – "+s.dhcpTo):"—"}</td><td>${s.v6||"—"}</td><td>${counterText(sx)} · ${sx.free} libres</td></tr>`;}).join("")}</table>
+        ${st.nat.length?`<h2>Reglas NAT</h2><table><tr><th>IP pública</th><th>Puerto</th><th>Protocolo</th><th>IP interna</th><th>Puerto interno</th><th>Equipo</th><th>Descripción</th></tr>
+          ${st.nat.map(r=>{const n=ip2n(r.int),sb=subnetOfIp(n),hh=sb&&sb.hosts[r.int];
+            return `<tr><td>${r.ext||"WAN"}</td><td>${r.extPort||"todos"}</td><td>${PROTOS[r.proto]}</td><td>${r.int}</td><td>${r.intPort||r.extPort||"todos"}</td><td>${esc(hh?hh.name:"")}</td><td>${esc(r.desc)}</td></tr>`;}).join("")}</table>`:""}`;
         st.subnets.forEach(s=>{
           const v=st.vlans.find(x=>x.id===s.vlan),rows=hostRows(st,s);
-          const img=planCanvas([{title:"",subnets:[s],vlans:st.vlans}],3e6).toDataURL("image/png");
+          const img=planCanvas([{title:"",subnets:[s],vlans:st.vlans,nat:st.nat}],3e6).toDataURL("image/png");
           h+=`<div class="sub"><h2>${s.cidr} — ${v?"VLAN "+v.vid+" · "+esc(v.name):"sin VLAN"}${s.name?" — "+esc(s.name):""}</h2>
             <img src="${img}" alt="">
             <table><tr><th>IP</th><th>Estado</th><th>Equipo</th><th>Tipo</th><th>MAC</th><th>Nota</th></tr>
             ${rows.map(r=>`<tr><td>${r.ip}</td><td>${r.est}</td><td>${esc(r.name)}</td><td>${esc(r.type)}</td><td>${esc(r.mac)}</td><td>${esc(r.note)}</td></tr>`).join("")||'<tr><td colspan="6">Sin IPs documentadas</td></tr>'}
-            </table></div>`;
+            </table>
+            ${s.v6?`<h2 style="font-size:11px;border-bottom:1px solid #000">IPv6 ${s.v6}${s.gw6?" · puerta de enlace "+s.gw6:""}</h2>
+            <table><tr><th>Dirección</th><th>Estado</th><th>Equipo</th><th>Tipo</th><th>MAC</th><th>Nota</th></tr>
+            ${hostRows6(s).map(r=>`<tr><td>${r.ip}</td><td>${r.est}</td><td>${esc(r.name)}</td><td>${esc(r.type)}</td><td>${esc(r.mac)}</td><td>${esc(r.note)}</td></tr>`).join("")||'<tr><td colspan="6">Sin direcciones IPv6 fijas</td></tr>'}
+            </table>`:""}</div>`;
         });
       });
     });
@@ -1592,7 +1944,7 @@ document.addEventListener("click",()=>expMenu.classList.remove("on"));
 expMenu.addEventListener("click",ev=>{
   const b=ev.target.closest("[data-exp]");if(!b)return;
   expMenu.classList.remove("on");
-  ({png:expPNG,pdf:expPDF,csv:expCSV,json:expJSON,rack:()=>{impMode="rackout";$("#file").click();}})[b.dataset.exp]();
+  ({png:expPNG,pdf:expPDF,csv:expCSV,nat:expNAT,json:expJSON,rack:()=>{impMode="rackout";$("#file").click();}})[b.dataset.exp]();
 });
 
 /* ---------- importar ---------- */
@@ -1939,8 +2291,13 @@ document.addEventListener("click",ev=>{
 addEventListener("beforeunload",ev=>{if(!lsOK&&!fileHandle){ev.preventDefault();ev.returnValue="";}});
 
 /* ---------- versión y novedades ---------- */
-const VERSION="1.0";
+const VERSION="1.1";
 const NEWS=[
+ {v:"1.1",d:"11 de octubre de 2026",items:[
+   "IPv6 en doble pila: cada subred puede llevar su prefijo IPv6 y su puerta de enlace, con una lista de direcciones IPv6 fijas (equipo, tipo, MAC y nota).",
+   "Plan IPv6: a partir del /48 o /56 del operador se propone un /64 para cada subred, usando el ID de VLAN cuando se puede. Sirve también de calculadora de prefijos.",
+   "Reglas NAT documentadas: IP y puerto públicos → IP interna, con aviso si dos reglas usan el mismo puerto o apuntan a una IP sin documentar. Las IPs publicadas llevan una marca en la cuadrícula.",
+   "El buscador, el CSV y el PDF incluyen las direcciones IPv6 y las reglas NAT, que además tienen su propio CSV."]},
  {v:"1.0",d:"9 de octubre de 2026",items:[
    "Primera versión pública: sedes, VLANs y subredes de /16 a /30 con aviso de solapes.",
    "Una casilla por IP con su estado, ficha con equipo, tipo, MAC, nota e historial.",

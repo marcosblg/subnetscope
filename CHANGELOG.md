@@ -2,6 +2,17 @@
 
 # Novedades de SubnetScope
 
+## v1.1 — 11 de octubre de 2026
+
+Lo más pedido en los comentarios del lanzamiento. ¡Gracias!
+
+- **IPv6 en doble pila**: cada subred puede llevar su prefijo IPv6 y su puerta de enlace, con una lista de direcciones IPv6 fijas (equipo, tipo, MAC y nota). La ficha de una IPv4 muestra también las IPv6 del mismo equipo.
+- **Plan IPv6**: a partir del /48 o /56 del operador se propone un /64 para cada subred, usando el ID de VLAN cuando se puede. Sirve también de calculadora de prefijos.
+- **Reglas NAT documentadas**: IP y puerto públicos → IP interna, con protocolo y descripción. Las IPs publicadas llevan una marca en la cuadrícula, su ficha muestra sus reglas y se avisa si dos reglas usan el mismo puerto público o si una apunta a una IP sin documentar.
+- El buscador, el CSV y el PDF incluyen las direcciones IPv6 y las reglas NAT, que tienen además su propio CSV.
+
+Los datos de la v1.0 se cargan tal cual.
+
 ## v1.0 — 9 de octubre de 2026
 
 Primera versión pública.
@@ -18,6 +29,17 @@ Primera versión pública.
 ---
 
 # What's new in SubnetScope
+
+## v1.1 — October 11, 2026
+
+The most requested features from the launch comments. Thank you!
+
+- **Dual-stack IPv6**: every subnet can carry its IPv6 prefix and gateway, with a list of static IPv6 addresses (device, type, MAC and note). An IPv4 card also shows the same device's IPv6 addresses.
+- **IPv6 plan**: from your ISP's /48 or /56 it proposes a /64 for each subnet, using the VLAN ID where possible. It doubles as a prefix calculator.
+- **Documented NAT rules**: public IP and port → internal IP, with protocol and description. Published IPs get a mark on the grid, their card lists their rules, and you are warned when two rules share a public port or one points to an undocumented IP.
+- Search, CSV and PDF include IPv6 addresses and NAT rules, which also get their own CSV.
+
+Data from v1.0 loads as is.
 
 ## v1.0 — October 9, 2026
 

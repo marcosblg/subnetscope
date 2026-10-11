@@ -12,7 +12,7 @@ It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**
 
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
-> **v1.0** · first public release. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
+> 🆕 **v1.1** (October 11, 2026): dual-stack IPv6 and documented NAT rules, requested in the comments. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
 
 Nothing to install or download: the link opens the tool with a sample office. Hit **▶ Ver demo** for the guided tour.
 
@@ -43,6 +43,17 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 - **Next free IP** button on every subnet: jumps to it and opens the card.
 - **Search** by IP, device name or MAC, highlighting the cell and expanding its block.
 - **Multi-select** (click, drag or Shift+click) to reserve or release whole ranges at once.
+
+**Dual-stack IPv6**
+- Every subnet can carry its **IPv6 prefix** and IPv6 gateway alongside IPv4.
+- A list of **static IPv6 addresses** per subnet, with the usual card: device, type, MAC and note. IPv6 is not drawn one cell per IP (a /64 is 18 quintillion addresses): only static ones are recorded.
+- **IPv6 plan**: give it your ISP's /48 or /56 and it proposes a /64 for each subnet, using the VLAN ID where possible (VLAN 10 → …:10::/64). It doubles as a prefix calculator.
+
+**NAT rules**
+- Document what is published to the Internet: public IP and port → internal IP, with protocol and description.
+- Published IPs get a mark on the grid and their card lists their rules.
+- Warns when two rules use the same public port or one points to an undocumented IP.
+- Documentation only: SubnetScope never connects to the firewall.
 
 **Sites or networks**
 - A site selector: each one with its own VLANs and subnets, fully independent.
@@ -75,7 +86,7 @@ One important caveat: browser storage is tied to the file's path. Move the HTML 
 
 ## What it does not do (yet)
 
-SubnetScope is manual documentation: no network scanning, no ping, no SNMP and no IPv6.
+SubnetScope is manual documentation: no network scanning, no ping, no SNMP and it never configures any device (NAT rules, for example, are only recorded).
 
 ## Compatibility
 
