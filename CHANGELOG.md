@@ -2,6 +2,15 @@
 
 # Novedades de SubnetScope
 
+## v1.3 — 14 de octubre de 2026
+
+Pedido en los comentarios: que las IPs reservadas en el DHCP salgan con su dueño aunque no estén en uso, y saber qué está dentro y fuera del pool.
+
+- **Reservas del DHCP**: las IPs estáticas del servidor (MikroTik, Windows, pfSense/ISC, Kea) salen como «Reserva del DHCP» con su dueño y su MAC, estén en uso o no. «Siguiente IP libre» se las salta y se avisa si chocan con una IP fija documentada para otro equipo.
+- **Pool del servidor**: al importar se leen también los rangos (`/ip pool`, ámbitos de Windows, `range` de `dhcpd.conf`, `pools` de Kea) y se propone ponerlos como rango DHCP de cada subred, enseñando antes la diferencia.
+- **MikroTik de una vez**: con el `/export` del router salen pool, concesiones y reservas. También entiende `print detail` con comentarios y líneas partidas.
+- Corregido: las estáticas de MikroTik entraban como concesiones normales y las reservas inactivas de Windows se descartaban.
+
 ## v1.2 — 13 de octubre de 2026
 
 Pedido en los comentarios: ver qué IPs están prestadas de verdad y qué VLAN va más cargada.
@@ -38,6 +47,15 @@ Primera versión pública.
 ---
 
 # What's new in SubnetScope
+
+## v1.3 — October 14, 2026
+
+Requested in the comments: show DHCP reservations with their owner even when unused, and know what is inside and outside the pool.
+
+- **DHCP reservations**: static IPs from the server (MikroTik, Windows, pfSense/ISC, Kea) show as "Reserva del DHCP" with owner and MAC, in use or not. "Next free IP" skips them and conflicts with documented static IPs are flagged.
+- **Server pool**: importing also reads the ranges (`/ip pool`, Windows scopes, `dhcpd.conf` `range`, Kea `pools`) and offers them as each subnet's DHCP range, showing the difference first.
+- **MikroTik in one go**: the router's `/export` brings pool, leases and reservations. `print detail` with comments and wrapped lines also works.
+- Fixed: MikroTik static leases were imported as regular leases and inactive Windows reservations were dropped.
 
 ## v1.2 — October 13, 2026
 

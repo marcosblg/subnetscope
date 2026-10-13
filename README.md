@@ -12,7 +12,7 @@ Es la herramienta hermana de **[RackScope](https://github.com/marcosblg/rackscop
 
 ### 👉 [Pruébalo ahora en el navegador](https://marcosblg.github.io/subnetscope/)
 
-> 🆕 **v1.2** (13 de octubre de 2026): importa las concesiones de tu servidor DHCP y ve qué IPs están prestadas, y la carga de cada VLAN de un vistazo. [Ver las novedades](CHANGELOG.md)
+> 🆕 **v1.3** (14 de octubre de 2026): reservas del DHCP con su dueño aunque el equipo no esté encendido, y el pool leído del propio servidor. Con un `/export` de MikroTik sale todo de golpe. [Ver las novedades](CHANGELOG.md)
 
 No hay que instalar ni descargar nada: el enlace abre la herramienta con una oficina de ejemplo. Pulsa **▶ Ver demo** para la visita guiada.
 
@@ -44,8 +44,14 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - **Buscador** por IP, nombre de equipo o MAC, que resalta la casilla y despliega su bloque.
 - **Selección múltiple** (clic, arrastrar o Shift+clic) para reservar o liberar rangos enteros de golpe.
 
-**Concesiones DHCP**
-- Importa las concesiones que exportes de tu servidor DHCP: **Windows Server** (`Get-DhcpServerv4Lease | Export-Csv`), **pfSense / Linux** (`dhcpd.leases`), **MikroTik**, **Kea** o un CSV con IP, MAC, nombre y caducidad.
+**Servidor DHCP: concesiones, reservas y pool**
+- Importa lo que exportes de tu servidor DHCP:
+  - **MikroTik**: el `/export` del router (pool, concesiones y reservas de una vez), `/ip dhcp-server lease export` o `print detail`.
+  - **Windows Server**: `Get-DhcpServerv4Lease`, `Get-DhcpServerv4Reservation` o `Get-DhcpServerv4Scope` con `Export-Csv`.
+  - **pfSense / Linux**: `dhcpd.leases` y `dhcpd.conf`.
+  - **Kea**: `kea-dhcp4.conf` o el CSV de concesiones. O un CSV con IP, MAC, nombre y caducidad.
+- Las **reservas** del servidor (IPs estáticas en el DHCP) salen como "Reserva del DHCP" con su dueño, estén en uso o no, dentro o fuera del pool.
+- El **pool** del servidor se propone como rango DHCP de cada subred, enseñando antes la diferencia con lo documentado.
 - Las IPs prestadas se pintan en la cuadrícula con su equipo, su MAC y la fecha de caducidad, y "Siguiente IP libre" se las salta.
 - Avisa si el DHCP ha prestado una IP que tienes documentada como fija para otro equipo, y si las concesiones llevan más de un día sin actualizarse.
 - No se conecta al servidor: exportas, importas y listo.

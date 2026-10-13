@@ -12,7 +12,7 @@ It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**
 
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
-> 🆕 **v1.2** (October 13, 2026): import the leases from your DHCP server to see which IPs are handed out, plus each VLAN's load at a glance. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
+> 🆕 **v1.3** (October 14, 2026): DHCP reservations shown with their owner even when the device is off, and the pool read from the server itself. A MikroTik `/export` brings everything at once. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
 
 Nothing to install or download: the link opens the tool with a sample office. Hit **▶ Ver demo** for the guided tour.
 
@@ -44,8 +44,14 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 - **Search** by IP, device name or MAC, highlighting the cell and expanding its block.
 - **Multi-select** (click, drag or Shift+click) to reserve or release whole ranges at once.
 
-**DHCP leases**
-- Import the leases you export from your DHCP server: **Windows Server** (`Get-DhcpServerv4Lease | Export-Csv`), **pfSense / Linux** (`dhcpd.leases`), **MikroTik**, **Kea** or a CSV with IP, MAC, name and expiry.
+**DHCP server: leases, reservations and pool**
+- Import what you export from your DHCP server:
+  - **MikroTik**: the router's `/export` (pool, leases and reservations at once), `/ip dhcp-server lease export` or `print detail`.
+  - **Windows Server**: `Get-DhcpServerv4Lease`, `Get-DhcpServerv4Reservation` or `Get-DhcpServerv4Scope` with `Export-Csv`.
+  - **pfSense / Linux**: `dhcpd.leases` and `dhcpd.conf`.
+  - **Kea**: `kea-dhcp4.conf` or the lease CSV. Or a CSV with IP, MAC, name and expiry.
+- Server **reservations** (static IPs in DHCP) show as "Reserva del DHCP" with their owner, in use or not, inside or outside the pool.
+- The server's **pool** is offered as each subnet's DHCP range, showing the difference first.
 - Leased IPs are painted on the grid with their device, MAC and expiry date, and "next free IP" skips them.
 - Warns when DHCP has leased an IP you documented as static for another device, and when the leases are more than a day old.
 - It never connects to the server: export, import, done.
