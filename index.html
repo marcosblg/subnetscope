@@ -71,7 +71,9 @@ html[data-theme="light"] .btn.danger:hover{background:#ffe4e8;color:#8d1524}
 .zoomwrap{display:flex;align-items:center;gap:2px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:2px;flex:0 0 auto}
 .zoomwrap button{background:none;border:0;color:var(--tx2);padding:5px 9px;border-radius:6px;font-size:14px;line-height:1}
 .zoomwrap button:hover{background:var(--panel3);color:var(--tx)}
-.zoomwrap span{font-size:11px;color:var(--tx3);width:40px;text-align:center;font-family:var(--m)}
+.zoomwrap input{font-size:11px;color:var(--tx3);width:42px;text-align:center;font-family:var(--m);background:none;border:0;border-radius:5px;padding:4px 0;outline:none}
+.zoomwrap input:hover,.zoomwrap input:focus{background:var(--bg2);color:var(--tx)}
+.zoomwrap button:disabled{opacity:.35;background:none}
 .menuwrap{position:relative;flex:0 0 auto}
 .menu{position:fixed;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--sh);padding:5px;min-width:250px;display:none;z-index:70}
 .menu.on{display:block}
@@ -327,7 +329,8 @@ body.ms #msbar{display:flex}
   <div class="swrap"><input id="search" placeholder="Buscar IP, equipo o MAC…" autocomplete="off"></div>
   <span class="pill" id="stats">—</span>
   <div class="spacer"></div>
-  <div class="zoomwrap"><button id="zo">−</button><span id="zl">100%</span><button id="zi">+</button><button id="zr" title="Tamaño normal">⤢</button></div>
+  <div class="zoomwrap"><button id="zo">−</button><input id="zl" value="100%" title="Escribe el zoom que quieras (50–160 %)" aria-label="Zoom"><button id="zi">+</button><button id="zr" title="Tamaño normal">⤢</button></div>
+  <div class="zoomwrap"><button id="undo" title="Deshacer (Ctrl+Z)" disabled>↶</button><button id="redo" title="Rehacer (Ctrl+Y)" disabled>↷</button></div>
   <button class="btn" id="theme" title="Cambiar tema">🌙</button>
   <div class="sep"></div>
   <button class="btn" id="tour" title="Demostración automática">▶ Ver demo</button>
@@ -625,7 +628,7 @@ function parseDB(d){
   if(!sites.length)return null;
   sites.forEach(r=>{r.id=safeId(r.id,"s");r.name=str(r.name)||"Sede";r.state=migrate(r.state);});
   return {v:1,current:sites.some(r=>r.id===d.current)?d.current:sites[0].id,
-          theme:d.theme==="light"?"light":"dark",expScope:d.expScope==="all"?"all":"site",sites};
+          theme:d.theme==="light"?"light":"dark",expScope:d.expScope==="all"?"all":"site",vlanSort:d.vlanSort==="carga"?"carga":"id",sites};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);if(raw){const d=parseDB(JSON.parse(raw));if(d)return d;}}catch(e){}
@@ -641,8 +644,10 @@ function useSite(id){
 let lsOK=true,fileHandle=null,fileName="",wTimer=null;
 function save(){
   HN.clear();
-  try{localStorage.setItem(KEY,JSON.stringify(DB));lsOK=true;}
+  const full=JSON.stringify(DB);
+  try{localStorage.setItem(KEY,full);lsOK=true;}
   catch(e){lsOK=false;}
+  histTrack(full);
   if(fileHandle){clearTimeout(wTimer);wTimer=setTimeout(writeFile,600);}
   updateSaveUI();
 }
@@ -700,7 +705,7 @@ async function restoreHandle(){
     const perm=await h.queryPermission({mode:"readwrite"});
     if(perm==="granted"){
       fileHandle=h;fileName=h.name;
-      try{const d=parseDB(JSON.parse(await (await h.getFile()).text()));if(d){DB=d;setTheme(DB.theme);useSite(DB.current);}}catch(e){}
+      try{const d=parseDB(JSON.parse(await (await h.getFile()).text()));if(d){DB=d;setTheme(DB.theme);useSite(DB.current);histReset();}}catch(e){}
     }else{
       const nm=await idbGet("name")||"tu archivo";
       toast("Pulsa 💾 Archivo para reconectar "+nm);
@@ -1802,12 +1807,52 @@ function giveIP(it){
 function setZoom(z){
   S.zoom=Math.max(.5,Math.min(1.6,Math.round(z*100)/100));
   inner.style.zoom=S.zoom;
-  $("#zl").textContent=Math.round(S.zoom*100)+"%";
+  $("#zl").value=Math.round(S.zoom*100)+"%";
   save();
 }
 $("#zi").onclick=()=>setZoom(S.zoom+.1);
 $("#zo").onclick=()=>setZoom(S.zoom-.1);
 $("#zr").onclick=()=>setZoom(1);
+$("#zl").addEventListener("change",ev=>{const v=parseFloat(String(ev.target.value).replace(",","."));
+  if(v>0)setZoom(v/100);else ev.target.value=Math.round(S.zoom*100)+"%";ev.target.blur();});
+$("#zl").addEventListener("keydown",ev=>{if(ev.key==="Enter")ev.target.blur();if(ev.key==="Escape"){ev.target.value=Math.round(S.zoom*100)+"%";ev.target.blur();}});
+$("#zl").addEventListener("focus",ev=>ev.target.select());
+
+/* ---------- deshacer / rehacer (Ctrl+Z / Ctrl+Y) ---------- */
+// cada guardado que cambia datos deja una foto; zoom, tema, sede elegida y bloques plegados no cuentan
+var UNDO,REDO,hFull=null,hKey=null,hMute=false;       // var: save() puede llegar antes de esta linea
+const H_UI=new Set(["zoom","theme","expScope","vlanSort","current","open","fold"]);
+function hKeyOf(){return JSON.stringify(DB,(k,v)=>H_UI.has(k)?undefined:v);}
+function histTrack(full){
+  if(!UNDO)return;
+  const k=hKeyOf();
+  if(hKey!==null&&k!==hKey&&!hMute){UNDO.push(hFull);if(UNDO.length>60)UNDO.shift();REDO.length=0;}
+  hKey=k;hFull=full;histUI();
+}
+function histReset(){UNDO=[];REDO=[];hFull=JSON.stringify(DB);hKey=hKeyOf();histUI();}
+function histUI(){const u=$("#undo"),r=$("#redo");if(u)u.disabled=!UNDO.length;if(r)r.disabled=!REDO.length;}
+function histGo(from,to,msg){
+  if(!from.length){toast(msg[1]);return;}
+  to.push(hFull);
+  const keep={current:DB.current,theme:DB.theme,expScope:DB.expScope,vlanSort:DB.vlanSort,zoom:S.zoom};
+  DB=parseDB(JSON.parse(from.pop()));
+  Object.assign(DB,{theme:keep.theme,expScope:keep.expScope,vlanSort:keep.vlanSort});
+  if(DB.sites.some(r=>r.id===keep.current))DB.current=keep.current;
+  site().state.zoom=keep.zoom;
+  hMute=true;try{useSite(DB.current);save();}finally{hMute=false;}
+  toast(msg[0]);
+}
+const undo=()=>histGo(UNDO,REDO,["Deshecho","No hay nada que deshacer"]);
+const redo=()=>histGo(REDO,UNDO,["Rehecho","No hay nada que rehacer"]);
+$("#undo").onclick=undo;$("#redo").onclick=redo;
+addEventListener("keydown",ev=>{
+  if(!(ev.ctrlKey||ev.metaKey)||ev.altKey)return;
+  const k=ev.key.toLowerCase();if(k!=="z"&&k!=="y")return;
+  const t=ev.target;if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable))return;
+  if(veil.classList.contains("on"))return;
+  ev.preventDefault();
+  if(k==="y"||ev.shiftKey)redo();else undo();
+});
 stage.addEventListener("wheel",ev=>{if(ev.ctrlKey){ev.preventDefault();setZoom(S.zoom+(ev.deltaY<0?.08:-.08));}},{passive:false});
 function setTheme(t){
   DB.theme=t==="light"?"light":"dark";document.documentElement.setAttribute("data-theme",DB.theme);
@@ -2579,8 +2624,12 @@ document.addEventListener("click",ev=>{
 addEventListener("beforeunload",ev=>{if(!lsOK&&!fileHandle){ev.preventDefault();ev.returnValue="";}});
 
 /* ---------- versión y novedades ---------- */
-const VERSION="1.3";
+const VERSION="1.4";
 const NEWS=[
+ {v:"1.4",d:"14 de octubre de 2026",items:[
+   "Deshacer y rehacer con Ctrl+Z / Ctrl+Y (o con ↶ ↷ en la barra).",
+   "Zoom escribiendo el porcentaje.",
+   "El orden de VLANs por carga se recuerda al volver a abrir."]},
  {v:"1.3",d:"14 de octubre de 2026",items:[
    "Reservas del DHCP: las IPs estáticas del servidor (MikroTik, Windows, pfSense, Kea) salen como «Reserva del DHCP» con su dueño, aunque el equipo no esté encendido. «Siguiente IP libre» se las salta.",
    "Pool del DHCP: al importar se lee también el rango del servidor y se propone ponerlo como rango DHCP de cada subred, enseñando antes la diferencia.",
@@ -2633,6 +2682,7 @@ fillSites();
 setTheme(DB.theme);
 setZoom(S.zoom||1);
 render();
+histReset();
 try{localStorage.setItem(KEY+".test","1");localStorage.removeItem(KEY+".test");}catch(e){lsOK=false;}
 updateSaveUI();
 restoreHandle();

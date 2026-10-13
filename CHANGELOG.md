@@ -2,6 +2,12 @@
 
 # Novedades de SubnetScope
 
+## v1.4 — 14 de octubre de 2026
+
+- **Deshacer y rehacer** con Ctrl+Z / Ctrl+Y, o con ↶ ↷ en la barra.
+- **Zoom** escribiendo el porcentaje.
+- Corregido: el orden de VLANs por carga se perdía al volver a abrir.
+
 ## v1.3 — 14 de octubre de 2026
 
 Pedido en los comentarios: que las IPs reservadas en el DHCP salgan con su dueño aunque no estén en uso, y saber qué está dentro y fuera del pool.
@@ -47,6 +53,12 @@ Primera versión pública.
 ---
 
 # What's new in SubnetScope
+
+## v1.4 — October 14, 2026
+
+- **Undo and redo** with Ctrl+Z / Ctrl+Y, or with ↶ ↷ in the toolbar.
+- **Zoom** by typing the percentage.
+- Fixed: sorting VLANs by load was forgotten on reopening.
 
 ## v1.3 — October 14, 2026
 
