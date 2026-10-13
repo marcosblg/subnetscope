@@ -153,6 +153,15 @@ body.noside #stage{left:0}
 .c.s-asig{background:#3b82f655;border-color:#3b82f6;color:var(--tx)}
 .c.s-resv{background:#f59e0b55;border-color:#f59e0b;color:var(--tx)}
 .c.s-dhcp{background:repeating-linear-gradient(45deg,#a855f740 0 4px,#a855f71a 4px 8px);border-color:#a855f7aa}
+.c.s-lease{background:#a855f7aa;border-color:#c084fc;color:#fff}
+.vl .ld{width:100%;display:flex;align-items:center;gap:6px;margin-top:4px}
+.vl .ld .bar{flex:1;height:5px}
+.vl .ld span{font-family:var(--m);font-size:10.5px;color:var(--tx3);min-width:34px;text-align:right}
+.vl .ld.hi span{color:var(--bad);font-weight:700}
+.vl{flex-wrap:wrap}
+.lsinfo{font-size:11.5px;color:var(--tx2);line-height:1.5;background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 9px}
+.lsinfo .old{color:var(--warn);font-weight:700}
+.lsinfo .row{display:flex;gap:5px;margin-top:6px}
 .c.s-gw{background:#22c55e66;border-color:#22c55e;color:var(--tx)}
 .c.s-net,.c.s-bc{background:repeating-linear-gradient(-45deg,#64748b66 0 3px,transparent 3px 6px);border-color:#64748b;color:var(--tx3);cursor:default}
 .c.has::after{content:"";position:absolute;top:-3px;right:-3px;width:7px;height:7px;border-radius:50%;background:var(--tx);border:1.5px solid var(--panel)}
@@ -357,8 +366,9 @@ body.ms #msbar{display:flex}
 </div>
 
 <aside id="side">
-  <div class="sec" id="secV"><div class="sh"><span>VLANs</span><button class="btn sm" id="vAdd">＋ VLAN</button></div><div id="vlist"></div></div>
+  <div class="sec" id="secV"><div class="sh"><span>VLANs</span><button class="btn sm" id="vSort" title="Ordenar las VLAN por carga o por ID">⇅ Carga</button><button class="btn sm" id="vAdd">＋ VLAN</button></div><div id="vlist"></div></div>
   <div class="sec" id="secS"><div class="sh"><span>Subredes</span><button class="btn sm" id="v6Plan" title="Proponer un prefijo IPv6 /64 para cada subred">IPv6…</button><button class="btn sm" id="nAdd">＋ Subred</button></div><div id="slist"></div></div>
+  <div class="sec" id="secD"><div class="sh"><span>Concesiones DHCP</span><button class="btn sm" id="lsImp" title="Importar las concesiones exportadas del servidor DHCP">⇣ Importar</button></div><div id="dlist"></div></div>
   <div class="sec" id="secN"><div class="sh"><span>Reglas NAT</span><button class="btn sm" id="natAdd">＋ Regla</button></div><div id="nlist"></div></div>
   <div class="sec" id="secI"><div class="sh"><span>Equipos sin IP</span><button class="btn sm" id="rsImp" title="Traer la lista de equipos de un JSON exportado de RackScope">⇣ RackScope</button></div><div id="ilist"></div></div>
 </aside>
@@ -389,6 +399,7 @@ const ST={
   asig: {n:"Asignada",        c:"#3b82f6"},
   resv: {n:"Reservada",       c:"#f59e0b"},
   dhcp: {n:"Rango DHCP",      c:"#a855f7"},
+  lease:{n:"Prestada (DHCP)", c:"#c084fc"},
   gw:   {n:"Puerta de enlace",c:"#22c55e"},
   net:  {n:"Red",             c:"#64748b"},
   bc:   {n:"Broadcast",       c:"#64748b"}
@@ -471,7 +482,7 @@ function seed(){
   const vU=V(20,"Usuarios","#38bdf8","Puestos de trabajo, impresoras y puntos de acceso");
   const vV=V(30,"Voz","#fb923c","Telefonía IP: centralita y terminales");
   const vI=V(40,"Invitados","#a3e635","Wifi de visitas, aislada de la red interna");
-  const N=(v,cidr,name,gw,dns,df,dt,open)=>({id:nid("n"),vlan:v.id,cidr,name,gw,dns,dhcpFrom:df,dhcpTo:dt,hosts:{},open:open||{},fold:false,v6:"",gw6:"",hosts6:{}});
+  const N=(v,cidr,name,gw,dns,df,dt,open)=>({id:nid("n"),vlan:v.id,cidr,name,gw,dns,dhcpFrom:df,dhcpTo:dt,hosts:{},open:open||{},fold:false,v6:"",gw6:"",hosts6:{},leases:{}});
   const nS=N(vS,"192.168.10.0/24","Servidores e infraestructura","192.168.10.1","192.168.10.10, 192.168.10.11","","");
   const nU=N(vU,"192.168.20.0/23","Usuarios — plantas 0 y 1","192.168.20.1","192.168.10.10, 192.168.10.11","192.168.20.100","192.168.21.200",{0:true});
   const nV=N(vV,"192.168.30.0/25","Telefonía IP","192.168.30.1","192.168.10.10","192.168.30.20","192.168.30.120");
@@ -519,12 +530,19 @@ function seed(){
   const nat=[T("443","tcp","192.168.10.41","","Web corporativa"),T("80","tcp","192.168.10.41","","Redirección a HTTPS"),
     T("25","tcp","192.168.10.42","","Correo entrante"),T("1194","udp","192.168.10.45","","VPN de teletrabajo"),
     T("5060-5061","udp","192.168.30.2","","SIP del operador")];
-  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[],nat};
+  // concesiones DHCP de ejemplo, como si se hubieran importado de un Windows Server
+  const now=Date.now(),L=(sb,from,cnt,pre,mk)=>{for(let i=0;i<cnt;i++){const n=ip2n(from)+i;
+    sb.leases[n2ip(n)]={mac:mac(n&255,200+i),name:pre+String(i+1).padStart(2,"0"),exp:now+(mk?3:7)*864e5+i*6e5};}};
+  [nS,nU,nV,nI].forEach(x=>x.leases={});
+  L(nU,"192.168.20.100",118,"PC-USUARIO-");L(nU,"192.168.21.0",40,"PORTATIL-");
+  L(nV,"192.168.30.20",71,"TEL-");L(nI,"192.168.40.10",212,"INVITADO-",true);
+  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[],nat,
+    dhcpInfo:{at:now,src:"dhcp-leases.csv (ejemplo)",fmt:"Windows Server (Export-Csv)"}};
 }
 
 /* ---------- estado ---------- */
 let DB=null,S=null;
-const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[],nat:[]});
+const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[],nat:[],dhcpInfo:null});
 function newSite(name,st){return {id:nid("s"),name:name||"Oficina de ejemplo",state:migrate(st||seed())};}
 function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
 // todo lo que llega de un JSON (importado o vinculado) se valida: ids, colores, IPs y textos
@@ -573,11 +591,16 @@ function migrate(d){
     const h6=s.hosts6&&typeof s.hosts6==="object"?s.hosts6:{};s.hosts6={};
     Object.keys(h6).forEach(k=>{const h=h6[k],a=in6(k);if(!h||typeof h!=="object"||!a)return;
       s.hosts6[a]={st:h.st==="resv"?"resv":"asig",name:str(h.name),type:has(TYPES,h.type)?h.type:"otro",mac:normMac(h.mac)||"",note:str(h.note)};});
+    const lz=s.leases&&typeof s.leases==="object"?s.leases:{};s.leases={};
+    Object.keys(lz).forEach(k=>{const l=lz[k],ip=ipOk(k,r.net,r.bc);if(!l||typeof l!=="object"||!ip)return;
+      s.leases[ip]={mac:normMac(l.mac)||"",name:str(l.name).slice(0,80),exp:Math.max(0,+l.exp||0)};});
     const open={};if(s.open&&typeof s.open==="object")Object.keys(s.open).forEach(k=>{if(/^\d+$/.test(k)&&s.open[k])open[k]=true;});
     s.open=open;s.fold=!!s.fold;
   });
   const ipAny=x=>ip2n(x)!=null?n2ip(ip2n(x)):(ip6n(x)!=null?n2ip6(ip6n(x)):"");
   d.log=Array.isArray(d.log)?d.log.filter(l=>l&&ipAny(l.ip)).map(l=>({t:+l.t||0,ip:ipAny(l.ip),act:str(l.act),name:str(l.name),mac:str(l.mac)})):[];
+  const di=d.dhcpInfo;
+  d.dhcpInfo=di&&typeof di==="object"&&+di.at>0?{at:+di.at,src:str(di.src).slice(0,120),fmt:str(di.fmt).slice(0,60)}:null;
   d.nat=Array.isArray(d.nat)?d.nat.filter(x=>x&&typeof x==="object"&&ip2n(x.int)!=null).map(x=>({id:safeId(x.id,"t"),
     ext:ip2n(x.ext)!=null?n2ip(ip2n(x.ext)):"",extPort:portOk(x.extPort)||"",proto:has(PROTOS,x.proto)?x.proto:"tcp",
     int:n2ip(ip2n(x.int)),intPort:portOk(x.intPort)||"",desc:str(x.desc)})):[];
@@ -705,8 +728,9 @@ function cellFn(s){
     if(n===p.net)return "net";
     if(n===p.bc)return "bc";
     if(n===g)return "gw";
-    const h=s.hosts[n2ip(n)];
+    const ip=n2ip(n),h=s.hosts[ip];
     if(h)return h.st;
+    if(leaseOn(s,ip))return "lease";
     if(hasD&&n>=d0&&n<=d1)return "dhcp";
     return "libre";
   };
@@ -730,9 +754,19 @@ function stats(s,lo,hi){
   }
   if(g!=null&&g>=a&&g<=b){gw=1;if(hasD&&g>=d0&&g<=d1)inD++;}
   if(hasD)dh=Math.max(0,Math.min(d1,b)-Math.max(d0,a)+1-inD);
+  // concesiones DHCP vigentes que no coinciden con una IP documentada
+  let ls=0,lsOut=0;
+  for(const ip in s.leases){
+    const n=ip2n(ip);if(n<a||n>b||n===g||s.hosts[ip]||!leaseOn(s,ip))continue;
+    ls++;if(!(hasD&&n>=d0&&n<=d1))lsOut++;
+  }
   const used=asig+resv+gw;
-  return {usable,asig,resv,gw,dh,used,free:Math.max(0,usable-used-dh)};
+  return {usable,asig,resv,gw,dh,used,ls,lsOut,occ:used+ls,free:Math.max(0,usable-used-dh-lsOut)};
 }
+// concesion DHCP vigente (las caducadas no cuentan)
+function leaseOn(s,ip){const l=s.leases&&s.leases[ip];return !!l&&(!l.exp||l.exp>Date.now());}
+const fdate=t=>new Date(t).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+function leaseTxt(l){return l.exp?(l.exp>Date.now()?"caduca el "+fdate(l.exp):"caducada el "+fdate(l.exp)):"sin fecha de caducidad";}
 function nextFree(s){const p=P(s),f=cellFn(s);for(let n=p.net+1;n<p.bc;n++)if(f(n)==="libre")return n;return null;}
 const overlapsOf=s=>S.subnets.filter(x=>x!==s&&overlap(P(s),P(x)));
 function subnetOfIp(n){return S.subnets.find(s=>{const p=P(s);return n>=p.net&&n<=p.bc;})||null;}
@@ -745,7 +779,7 @@ function findHost(fn,skipS,skipIp){
 }
 function barHTML(st){
   const t=st.usable||1,seg=(v,c)=>v?`<b style="width:${(v/t*100).toFixed(2)}%;background:${c}"></b>`:"";
-  return `<span class="bar">${seg(st.gw,ST.gw.c)}${seg(st.asig,ST.asig.c)}${seg(st.resv,ST.resv.c)}${seg(st.dh,ST.dhcp.c+"99")}</span>`;
+  return `<span class="bar">${seg(st.gw,ST.gw.c)}${seg(st.asig,ST.asig.c)}${seg(st.resv,ST.resv.c)}${seg(st.ls,ST.lease.c)}${seg(Math.max(0,st.dh-(st.ls-st.lsOut)),ST.dhcp.c+"99")}</span>`;
 }
 
 /* ---------- render ---------- */
@@ -769,7 +803,7 @@ function render(){
   if(openC){const n=cellNode(openC.sid,openC.n);if(n){n.classList.add("sel");openNode=n;placePop();}else closePop();}
 }
 function counterText(st){
-  return `${fmt(st.used)} / ${fmt(st.usable)} usadas`+(st.dh?` · ${fmt(st.dh)} DHCP`:"");
+  return `${fmt(st.used)} / ${fmt(st.usable)} usadas`+(st.dh?` · ${fmt(st.dh)} DHCP`:"")+(st.ls?` · ${fmt(st.ls)} prestadas`:"");
 }
 function netNode(s,i){
   const p=P(s),v=vlanOf(s),col=v?v.color:"#8797b5",st=stats(s),ov=overlapsOf(s);
@@ -826,7 +860,7 @@ function v6Node(s){
   const w=document.createElement("div");w.className="v6";
   const rows=hostRows6(s),nf=Object.keys(s.hosts6).length;
   w.innerHTML=`<div class="v6h"><b>IPv6</b><span class="p6">${s.v6}</span>${s.gw6?`<span class="chip"><em>Enlace</em>${s.gw6}</span>`:""}
-      <span class="cnt">${nf} dirección${nf===1?"":"es"} fija${nf===1?"":"s"}</span><span style="flex:1"></span>
+      <span class="cnt">${nf} ${nf===1?"dirección fija":"direcciones fijas"}</span><span style="flex:1"></span>
       <button class="btn sm" data-act="add6">＋ Dirección IPv6</button></div>`+
     (rows.length?`<table class="v6t"><tr><th>Dirección</th><th>Estado</th><th>Equipo</th><th>Tipo</th><th>MAC</th><th>Nota</th><th></th></tr>
       ${rows.map(r=>`<tr data-a6="${r.ip}"><td class="a">${r.ip}</td><td><span class="st" style="color:${ST[r.k].c};border-color:${ST[r.k].c}">${r.est}</span></td>
@@ -851,15 +885,32 @@ function cellsNode(s,lo,hi){
 }
 const cellNode=(sid,n)=>netsEl.querySelector(`.c[data-s="${sid}"][data-n="${n}"]`);
 
+// ocupacion de una VLAN: asignadas + reservadas + enlace + prestadas por DHCP sobre las IPs utiles
+function vlanLoad(v){
+  const ns=S.subnets.filter(s=>s.vlan===v.id);let occ=0,usable=0;
+  ns.forEach(s=>{const x=stats(s);occ+=x.occ;usable+=x.usable;});
+  return {k:ns.length,occ,usable,pc:usable?Math.round(occ/usable*100):0};
+}
 function renderSide(){
-  const vs=vlansSorted();
-  $("#vlist").innerHTML=vs.length?vs.map(v=>{
-    const k=S.subnets.filter(s=>s.vlan===v.id).length;
-    return `<div class="vl" data-v="${v.id}" title="${esc(v.desc)}"><i style="background:${v.color}"></i><span class="id">${v.vid}</span>
-      <span class="n">${esc(v.name)}</span><span class="k">${k} red${k===1?"":"es"}</span><button class="ed" data-ved="${v.id}" title="Editar VLAN">✎</button></div>`;
+  const byLoad=DB.vlanSort==="carga";
+  const vs=vlansSorted().map(v=>({v,...vlanLoad(v)}));
+  if(byLoad)vs.sort((a,b)=>b.pc-a.pc||a.v.vid-b.v.vid);
+  $("#vSort").classList.toggle("acc",byLoad);
+  $("#vlist").innerHTML=vs.length?vs.map(({v,k,occ,usable,pc})=>{
+    const hi=pc>=80,col=hi?"var(--bad)":pc>=60?"var(--warn)":v.color;
+    return `<div class="vl" data-v="${v.id}" title="${esc(v.desc)}${usable?"\n"+fmt(occ)+" de "+fmt(usable)+" IPs ocupadas (asignadas, reservadas, enlace y prestadas por DHCP)":""}"><i style="background:${v.color}"></i><span class="id">${v.vid}</span>
+      <span class="n">${esc(v.name)}</span><span class="k">${k} red${k===1?"":"es"}</span><button class="ed" data-ved="${v.id}" title="Editar VLAN">✎</button>
+      ${usable?`<div class="ld${hi?" hi":""}"><span class="bar"><b style="width:${pc}%;background:${col}"></b></span><span>${hi?"⚠ ":""}${pc}%</span></div>`:""}</div>`;
   }).join(""):'<div class="sempty">Sin VLAN. Crea la primera con ＋ VLAN.</div>';
+  const di=S.dhcpInfo;
+  if(di&&di.at){
+    const nls=S.subnets.reduce((a,s)=>a+stats(s).ls,0),dias=Math.floor((Date.now()-di.at)/864e5);
+    $("#dlist").innerHTML=`<div class="lsinfo"><b>${fmt(nls)}</b> IPs prestadas ahora · ${esc(di.src)}<br>${esc(di.fmt)} · importado el ${fdate(di.at)}
+      ${dias>=1?`<div class="old">⚠ Hace ${dias} día${dias>1?"s":""}: vuelve a importarlas para tenerlas al día</div>`:""}
+      <div class="row"><button class="btn sm" id="lsAgain">Actualizar</button><button class="btn sm danger" id="lsDel">Quitar</button></div></div>`;
+  }else $("#dlist").innerHTML='<div class="sempty">Importa las concesiones que exportes de tu servidor DHCP (Windows Server, pfSense, MikroTik, Kea…) para ver qué IPs del rango están prestadas y a quién. No se conecta al servidor.</div>';
   $("#slist").innerHTML=S.subnets.length?S.subnets.map(s=>{
-    const v=vlanOf(s),st=stats(s),pc=st.usable?Math.round(st.used/st.usable*100):0;
+    const v=vlanOf(s),st=stats(s),pc=st.usable?Math.round(st.occ/st.usable*100):0;
     return `<button class="si" data-sgo="${s.id}" title="${esc(s.name)}"><i style="background:${v?v.color:"#8797b5"}"></i>
       <span class="cidr">${s.cidr}</span><span class="k">${v?"VLAN "+v.vid+" · ":""}${pc}%</span>${barHTML(st)}</button>`;
   }).join(""):'<div class="sempty">Sin subredes.</div>';
@@ -884,6 +935,8 @@ function showTip(node){
   if(h&&h.mac)t+=`<div class="fr">${esc(h.mac)}</div>`;
   if(h&&h.note)t+=`<div class="fr">${esc(h.note.length>90?h.note.slice(0,90)+"…":h.note)}</div>`;
   if(!h&&k==="libre")t+=`<div class="fr">Clic para asignarla</div>`;
+  const ll=s.leases&&s.leases[ip];
+  if(ll)t+=`<div class="fr" style="color:#c084fc">DHCP: ${esc(ll.name||"sin nombre")}${ll.mac?" · "+ll.mac:""} · ${leaseTxt(ll)}</div>`;
   natOf(ip).forEach(r=>t+=`<div class="fr" style="color:#22d3ee">NAT: ${natLabel(r)} → aquí${r.intPort?":"+r.intPort:""}</div>`);
   tip.innerHTML=t;tip.classList.add("on");
   const r=node.getBoundingClientRect();
@@ -924,7 +977,12 @@ function openCell(sid,n,node,focus){
     let aviso="";
     if(k==="gw")aviso="Es la <b>puerta de enlace</b> de la subred. Puedes anotar qué equipo la tiene.";
     if(inD)aviso+=(aviso?"<br>":"")+"Está dentro del <b>rango DHCP</b>: si la fijas, exclúyela también en el servidor DHCP.";
-    const x=h||{name:"",type:"pc",mac:"",note:""};
+    const ls=s.leases&&s.leases[ip];
+    if(ls){
+      aviso+=(aviso?"<br>":"")+`<b>Concesión DHCP</b>: ${esc(ls.name||"sin nombre")}${ls.mac?" · "+ls.mac:""} · ${leaseTxt(ls)}.`;
+      if(h&&h.st==="asig"&&ls.mac&&h.mac&&ls.mac!==h.mac)aviso+=` <span class="bad">La MAC no coincide con la documentada: puede haber un conflicto de IP.</span>`;
+    }
+    const x=h||(ls?{name:ls.name,type:"pc",mac:ls.mac,note:""}:{name:"",type:"pc",mac:"",note:""});
     $("#popB").innerHTML=ctx+(aviso?`<div class="note">${aviso}</div>`:"")+`
       <div class="fld"><label>Equipo</label><input id="p_name" list="invlist" value="${esc(x.name)}" placeholder="srv-app-01, imp-recepcion…" autocomplete="off"></div>
       <div class="grid2">
@@ -1214,6 +1272,10 @@ function searchHits(q){
               (looksMac&&h.mac&&h.mac.replace(/:/g,"").toLowerCase().includes(qh));
       if(m)out.push({s,n});
     });
+    Object.keys(s.leases).forEach(ip=>{                // equipos que solo aparecen en las concesiones DHCP
+      const n=ip2n(ip),l=s.leases[ip];if(n===ipq||s.hosts[ip]||!leaseOn(s,ip))return;
+      if((looksIp&&ip.includes(q))||(l.name&&l.name.toLowerCase().includes(ql))||(looksMac&&l.mac&&l.mac.replace(/:/g,"").toLowerCase().includes(qh)))out.push({s,n});
+    });
     const q6=ip6n(q),hex6=/^[0-9a-f:]+$/.test(ql)&&ql.includes(":");
     Object.keys(s.hosts6).forEach(a=>{
       const h=s.hosts6[a];
@@ -1243,7 +1305,7 @@ function drawSres(){
     if(x.nat)return `<button data-i="${i}"${cur}><b>${natLabel(x.nat)}</b>→ ${x.nat.int}${x.nat.intPort?":"+x.nat.intPort:""}<small>Regla NAT${x.nat.desc?" · "+esc(x.nat.desc):""}</small></button>`;
     if(x.a6){const h=x.s.hosts6[x.a6],v6=vlanOf(x.s);
       return `<button data-i="${i}"${cur}><b>${x.a6}</b>${esc(h.name||ST[h.st].n)}<small>${v6?"VLAN "+v6.vid+" · "+esc(v6.name)+" · ":""}${x.s.v6} · IPv6</small></button>`;}
-    const ip=n2ip(x.n),h=x.s.hosts[ip],k=cellFn(x.s)(x.n),v=vlanOf(x.s);
+    const ip=n2ip(x.n),k=cellFn(x.s)(x.n),v=vlanOf(x.s),h=x.s.hosts[ip]||(x.s.leases[ip]&&leaseOn(x.s,ip)?x.s.leases[ip]:null);
     return `<button data-i="${i}"${i===sresCur?' class="cur"':""}><b>${ip}</b>${esc(h&&h.name?h.name:ST[k].n)}${h&&h.mac?" · "+esc(h.mac):""}
       <small>${v?"VLAN "+v.vid+" · "+esc(v.name)+" · ":""}${x.s.cidr} · ${ST[k].n}</small></button>`;
   }).join("")+(sresList.length>40?`<div class="none">…y ${sresList.length-40} más</div>`:"")
@@ -1332,7 +1394,7 @@ function editSubnet(s){
   const isNew=!s;
   if(isNew&&!S.vlans.length&&!confirm("Todavía no hay ninguna VLAN en esta sede. ¿Crear la subred sin VLAN? (Cancelar para crear antes la VLAN)")){editVlan(null);return;}
   const vs=vlansSorted();
-  s=s||{id:nid("n"),cidr:"",name:"",vlan:vs.length?vs[0].id:"",gw:"",dns:"",dhcpFrom:"",dhcpTo:"",hosts:{},open:{},fold:false,v6:"",gw6:"",hosts6:{}};
+  s=s||{id:nid("n"),cidr:"",name:"",vlan:vs.length?vs[0].id:"",gw:"",dns:"",dhcpFrom:"",dhcpTo:"",hosts:{},open:{},fold:false,v6:"",gw6:"",hosts6:{},leases:{}};
   modal.innerHTML=`<h3>${isNew?"Nueva subred":"Editar subred "+esc(s.cidr)}</h3>
   <div class="body">
     <div class="grid2">
@@ -1413,6 +1475,7 @@ function editSubnet(s){
     s.gw=gw!=null?n2ip(gw):"";s.dns=dns.map(x=>n2ip(ip2n(x))).join(", ");
     s.dhcpFrom=d0!=null?n2ip(d0):"";s.dhcpTo=d1!=null?n2ip(d1):"";
     lost6.forEach(a=>delete s.hosts6[a]);s.v6=r6?r6.cidr:"";s.gw6=g6;
+    Object.keys(s.leases).forEach(ip=>{const q=ip2n(ip);if(q<=r.net||q>=r.bc)delete s.leases[ip];});
     if(changed)s.open=r.len<24?{0:true}:{};
     if(isNew)S.subnets.push(s);
     save();closeModal();render();
@@ -1465,7 +1528,8 @@ function splitSubnet(s){
     const parts=pl.map((x,k)=>{
       const n={id:nid("n"),cidr:x.cidr,name:s.name?s.name+" ("+(k+1)+"/"+pl.length+")":"",vlan:s.vlan,
         gw:g!=null&&g>x.net&&g<x.bc?s.gw:"",dns:s.dns,dhcpFrom:"",dhcpTo:"",hosts:{},open:x.len<24?{0:true}:{},fold:false,
-        v6:k===0?s.v6:"",gw6:k===0?s.gw6:"",hosts6:k===0?s.hosts6:{}};
+        v6:k===0?s.v6:"",gw6:k===0?s.gw6:"",hosts6:k===0?s.hosts6:{},leases:{}};
+      Object.keys(s.leases).forEach(ip=>{const q=ip2n(ip);if(q>x.net&&q<x.bc)n.leases[ip]=s.leases[ip];});
       if(d0!=null&&d1!=null){const a=Math.max(d0,x.net+1),b=Math.min(d1,x.bc-1);if(a<=b){n.dhcpFrom=n2ip(a);n.dhcpTo=n2ip(b);}}
       x.hosts.forEach(ip=>{if(!x.lost.includes(ip))n.hosts[ip]=s.hosts[ip];});
       return n;
@@ -1642,8 +1706,14 @@ function editNat(rule,preIp){
 $("#vAdd").onclick=()=>editVlan(null);
 $("#nAdd").onclick=()=>editSubnet(null);
 $("#natAdd").onclick=()=>editNat(null);
+$("#vSort").onclick=()=>{DB.vlanSort=DB.vlanSort==="carga"?"id":"carga";save();renderSide();};
+$("#lsImp").onclick=()=>pickLeases();
 $("#v6Plan").onclick=plan6;
 $("#side").addEventListener("click",ev=>{
+  if(ev.target.id==="lsAgain"){pickLeases();return;}
+  if(ev.target.id==="lsDel"){
+    const snap=snapDB();S.subnets.forEach(x=>x.leases={});S.dhcpInfo=null;save();render();toastUndo("Concesiones DHCP quitadas.",snap);return;
+  }
   const nt=ev.target.closest("[data-nat]");
   if(nt){editNat(S.nat.find(r=>r.id===nt.dataset.nat));return;}
   const ed=ev.target.closest("[data-ved]");
@@ -1791,6 +1861,8 @@ function expCSV(){
   scopeSites().forEach(si=>si.state.subnets.forEach(s=>{
     const v=si.state.vlans.find(x=>x.id===s.vlan);
     hostRows(si.state,s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.cidr,r.ip,r.est,r.name,r.type,r.mac,r.note]));
+    Object.keys(s.leases).filter(ip=>!s.hosts[ip]&&ip!==s.gw).map(ip=>({ip,n:ip2n(ip)})).sort((x,y)=>x.n-y.n).forEach(({ip})=>{
+      const l=s.leases[ip];rows.push([si.name,v?v.vid:"",v?v.name:"",s.cidr,ip,leaseOn(s,ip)?ST.lease.n:"Concesión caducada",l.name,"",l.mac,"DHCP: "+leaseTxt(l)]);});
     if(s.v6)hostRows6(s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.v6,r.ip,r.est,r.name,r.type,r.mac,r.note]));
   }));
   const qq=v=>{let t=String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};   // evita formulas al abrirlo en Excel
@@ -1813,7 +1885,7 @@ function expJSON(){
   deliver(new Blob([j],{type:"application/json"}),"subnetscope-"+stamp()+".json","txt",j);
 }
 /* --- dibujo de las cuadriculas en un canvas (fondo claro, para imprimir) --- */
-const CK={libre:["#f1f5f9","#cbd5e1"],asig:["#bfdbfe","#2563eb"],resv:["#fde68a","#b45309"],dhcp:["#ede9fe","#9333ea"],
+const CK={lease:["#d8b4fe","#7e22ce"],libre:["#f1f5f9","#cbd5e1"],asig:["#bfdbfe","#2563eb"],resv:["#fde68a","#b45309"],dhcp:["#ede9fe","#9333ea"],
           gw:["#bbf7d0","#15803d"],net:["#cbd5e1","#64748b"],bc:["#cbd5e1","#64748b"]};
 // bloques /24 que se dibujan: en subredes grandes solo los que tienen algo (como mucho 16)
 function drawBlocks(s){
@@ -1965,14 +2037,114 @@ function rackRooms(d,fname){
   if(d&&d.state&&Array.isArray(d.state.racks))return [d];
   return null;
 }
+/* ---------- concesiones DHCP: se importan de un archivo exportado del servidor ---------- */
+function pickLeases(){impMode="dhcp";const fi=$("#file");fi.accept="";fi.click();setTimeout(()=>fi.accept=".json,application/json",1000);}
+// "1d2h3m4s" (MikroTik) -> ms desde ahora
+function durMs(t){t=str(t).trim();if(!t||t==="never")return 0;let ms=0,ok=false;
+  t.replace(/(\d+)(w|d|h|m|s)/g,(_,n,u)=>{ok=true;ms+=n*{w:6048e5,d:864e5,h:36e5,m:6e4,s:1e3}[u];});return ok?Date.now()+ms:0;}
+// fechas de Windows (dd/mm/aaaa o mm/dd/aaaa con AM/PM), ISO o segundos epoch (Kea)
+function parseWhen(v){
+  v=str(v).trim();if(!v)return 0;
+  if(/^\d{9,11}$/.test(v))return +v*1000;
+  let m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?/.exec(v);
+  if(m){let a=+m[1],b=+m[2],d,mo,h=+m[4];
+    if(m[7]){mo=a;d=b;if(/p/i.test(m[7])&&h<12)h+=12;if(/a/i.test(m[7])&&h===12)h=0;}
+    else if(b>12){mo=a;d=b;}else{d=a;mo=b;}
+    return new Date(+m[3],mo-1,d,h,+m[5],+(m[6]||0)).getTime();}
+  const t=Date.parse(v);return isNaN(t)?0:t;
+}
+function csvCells(l,sep){const out=[];let cur="",q=false;
+  for(let i=0;i<l.length;i++){const c=l[i];
+    if(q){if(c==='"'){if(l[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+    else if(c==='"')q=true;else if(c===sep){out.push(cur);cur="";}else cur+=c;}
+  out.push(cur);return out.map(x=>x.trim());}
+// detecta el formato y devuelve {fmt, items:[{ip,mac,name,exp}], skipped}
+function parseLeases(txt){
+  if(/\blease\s+\d{1,3}(?:\.\d{1,3}){3}\s*\{/.test(txt)){       // ISC dhcpd.leases (pfSense, Linux)
+    const re=/lease\s+(\d{1,3}(?:\.\d{1,3}){3})\s*\{([\s\S]*?)\}/g,last={};let m,sk=0;
+    while((m=re.exec(txt))){
+      const b=m[2],st=/binding state\s+(\w+)/.exec(b);
+      if(st&&st[1]!=="active"){delete last[m[1]];sk++;continue;}
+      const mac=/hardware ethernet\s+([0-9a-f:]+)/i.exec(b),hn=/client-hostname\s+"([^"]*)"/.exec(b),
+            en=/ends\s+\d\s+(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/.exec(b);
+      last[m[1]]={ip:m[1],mac:mac?mac[1]:"",name:hn?hn[1]:"",exp:en?Date.UTC(+en[1],en[2]-1,+en[3],+en[4],+en[5],+en[6]):0};
+    }
+    return {fmt:"ISC dhcpd.leases (pfSense, Linux)",items:Object.values(last),skipped:sk};
+  }
+  if(/(^|\s)address=\d/m.test(txt)&&/mac-address=/.test(txt)){   // MikroTik: /ip dhcp-server lease print/export
+    const items=[];
+    txt.split(/\r?\n/).forEach(l=>{
+      const g=k=>{const m=new RegExp("(?:^|\\s)"+k+'=("([^"]*)"|\\S+)').exec(l);return m?(m[2]!=null?m[2]:m[1]):"";};
+      const ip=g("address");if(ip)items.push({ip,mac:g("mac-address"),name:g("host-name")||g("comment"),exp:durMs(g("expires-after"))});
+    });
+    return {fmt:"MikroTik RouterOS",items,skipped:0};
+  }
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim()&&!/^#/.test(l.trim()));   // CSV: Windows Export-Csv, Kea o generico
+  if(lines.length<2)return null;
+  const sep=[",",";","\t"].map(c=>[c,csvCells(lines[0],c).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const hd=csvCells(lines[0],sep).map(h=>h.toLowerCase().normalize("NFD").replace(/[^a-z]/g,""));
+  const col=(...ns)=>hd.findIndex(h=>ns.includes(h));
+  const ci=col("ipaddress","address","ip","direccionip","direccion"),cm=col("clientid","hwaddr","mac","macaddress","direccionmac","hardwareaddress"),
+        cn=col("hostname","name","nombre","equipo","clienthostname","nombredehost"),ce=col("leaseexpirytime","expire","expires","expiry","caduca","vencimiento","expiracion"),
+        cs=col("addressstate","state","estado");
+  if(ci<0)return null;
+  const items=[];let sk=0;
+  lines.slice(1).forEach(l=>{
+    const c=csvCells(l,sep),st=cs>=0?(c[cs]||"").toLowerCase():"";
+    if(/inactive|declined|expired|released|^2$|^1$/.test(st)){sk++;return;}   // Kea: state 1 declinada, 2 caducada
+    items.push({ip:c[ci],mac:cm>=0?c[cm]:"",name:cn>=0?c[cn]:"",exp:ce>=0?parseWhen(c[ce]):0});
+  });
+  const fmt=hd.includes("leaseexpirytime")||hd.includes("addressstate")?"Windows Server (Export-Csv)":hd.includes("hwaddr")?"Kea (CSV)":"CSV";
+  return {fmt,items,skipped:sk};
+}
+function leaseImport(fname,txt){
+  const r=parseLeases(txt);
+  if(!r||!r.items.length)return importError("“"+fname+"” no parece una exportación de concesiones DHCP.\n\nFormatos que entiende:\n· Windows Server: Get-DhcpServerv4Lease -ScopeId … | Export-Csv concesiones.csv\n· pfSense / Linux: el archivo dhcpd.leases\n· MikroTik: /ip dhcp-server lease print detail (copiado a un .txt)\n· Kea: el CSV de concesiones\n· Un CSV con columnas IP, MAC, Nombre y Caduca");
+  const now=Date.now(),plan=new Map();let fuera=0,cad=0,mal=0;const conf=[];
+  r.items.forEach(it=>{
+    const n=ip2n(it.ip);if(n==null){mal++;return;}
+    if(it.exp&&it.exp<now){cad++;return;}
+    const s=subnetOfIp(n),ip=n2ip(n);
+    if(!s||n===P(s).net||n===P(s).bc){fuera++;return;}
+    const mac=normMac(it.mac)||"",name=str(it.name).replace(/\.$/,"").slice(0,80),h=s.hosts[ip];
+    if(h&&h.st==="asig"&&((mac&&h.mac&&mac!==h.mac)||(!mac&&name&&h.name&&name.toLowerCase()!==h.name.toLowerCase())))conf.push({ip,doc:h.name,dhcp:name||mac});
+    if(!plan.has(s))plan.set(s,{});
+    plan.get(s)[ip]={mac,name,exp:it.exp||0};
+  });
+  const total=[...plan.values()].reduce((a,o)=>a+Object.keys(o).length,0);
+  let enRango=0;plan.forEach((o,s)=>{const d0=ip2n(s.dhcpFrom),d1=ip2n(s.dhcpTo);Object.keys(o).forEach(ip=>{const n=ip2n(ip);if(d0!=null&&n>=d0&&n<=d1)enRango++;});});
+  modal.innerHTML=`<h3>Concesiones DHCP</h3>
+  <div class="body">
+    <div class="hint">“${esc(fname)}” · formato <b>${esc(r.fmt)}</b></div>
+    <ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7">
+      <li><b>${fmt(total)}</b> concesiones vigentes en subredes de “${esc(site().name)}”${total?` (${fmt(enRango)} dentro del rango DHCP documentado${total-enRango?", "+fmt(total-enRango)+" fuera, quizá reservas":""})`:""}</li>
+      ${fuera?`<li>${fmt(fuera)} de IPs que no están en ninguna subred de esta sede</li>`:""}
+      ${cad+r.skipped?`<li>${fmt(cad+r.skipped)} caducadas o inactivas, que no se importan</li>`:""}
+      ${mal?`<li>${fmt(mal)} líneas sin una IP válida</li>`:""}
+    </ul>
+    ${conf.length?`<div class="hint bad">⚠ ${conf.length} posible${conf.length>1?"s":""} conflicto${conf.length>1?"s":""}: el DHCP ha prestado una IP que tienes documentada como fija para otro equipo.<br>${conf.slice(0,6).map(c=>esc(c.ip+": "+c.doc+" ↔ "+c.dhcp)).join("<br>")}${conf.length>6?"<br>…":""}</div>`:""}
+    <div class="hint">Sustituye a las concesiones importadas antes. No se toca nada de lo documentado: las IPs prestadas se ven en la cuadrícula en otro color y en su ficha.</div>
+  </div>
+  <div class="foot"><button class="btn" id="m_cancel">Cancelar</button><button class="btn acc" id="m_ok"${total?"":" disabled"}>Importar</button></div>`;
+  veil.classList.add("on");
+  $("#m_cancel").onclick=closeModal;
+  $("#m_ok").onclick=()=>{
+    const snap=snapDB();
+    S.subnets.forEach(s=>s.leases=plan.get(s)||{});
+    S.dhcpInfo={at:Date.now(),src:fname,fmt:r.fmt};
+    save();closeModal();document.body.classList.remove("noside");layout();render();
+    toastUndo(fmt(total)+" concesiones DHCP importadas.",snap);
+  };
+}
 function importText(f){
   const rd=new FileReader();
   rd.onerror=()=>importError("No se ha podido leer el archivo “"+f.name+"”.");
   rd.onload=()=>{
     const txt=String(rd.result||"").replace(/^\uFEFF/,"").trim();
+    if(impMode==="dhcp")return leaseImport(f.name,txt);
     let d=null;
     try{d=JSON.parse(txt);}
-    catch(err){return importError("El archivo “"+f.name+"” no es un JSON válido.\n\nEmpieza por: "+(txt.slice(0,60)||"(vacío)")+"\n\nError: "+err.message);}
+    catch(err){if(parseLeases(txt))return leaseImport(f.name,txt);return importError("El archivo “"+f.name+"” no es un JSON válido.\n\nEmpieza por: "+(txt.slice(0,60)||"(vacío)")+"\n\nError: "+err.message);}
     const nombre=f.name.replace(/\.[a-z]+$/i,"");
     const rooms=rackRooms(d,nombre);
     if(impMode==="rackout")return rooms?rackExport(f.name,d,rooms):importError("“"+f.name+"” no parece un JSON de RackScope (no encuentro salas ni racks).\n\nEn RackScope: Exportar › Copia de seguridad (JSON).");
@@ -2291,8 +2463,12 @@ document.addEventListener("click",ev=>{
 addEventListener("beforeunload",ev=>{if(!lsOK&&!fileHandle){ev.preventDefault();ev.returnValue="";}});
 
 /* ---------- versión y novedades ---------- */
-const VERSION="1.1";
+const VERSION="1.2";
 const NEWS=[
+ {v:"1.2",d:"13 de octubre de 2026",items:[
+   "Concesiones DHCP: importa las que exportes de tu servidor (Windows Server, pfSense, MikroTik, Kea o un CSV) y verás qué IPs del rango están prestadas, a qué equipo y hasta cuándo. Sin conectarse al servidor.",
+   "Avisa si el DHCP ha prestado una IP que tienes documentada como fija para otro equipo, y si las concesiones llevan más de un día sin actualizarse.",
+   "Carga por VLAN: cada VLAN muestra su porcentaje de IPs ocupadas y se pueden ordenar de más a menos cargada (⇅ Carga), con aviso a partir del 80 %."]},
  {v:"1.1",d:"11 de octubre de 2026",items:[
    "IPv6 en doble pila: cada subred puede llevar su prefijo IPv6 y su puerta de enlace, con una lista de direcciones IPv6 fijas (equipo, tipo, MAC y nota).",
    "Plan IPv6: a partir del /48 o /56 del operador se propone un /64 para cada subred, usando el ID de VLAN cuando se puede. Sirve también de calculadora de prefijos.",

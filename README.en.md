@@ -12,7 +12,7 @@ It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**
 
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
-> 🆕 **v1.1** (October 11, 2026): dual-stack IPv6 and documented NAT rules, requested in the comments. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
+> 🆕 **v1.2** (October 13, 2026): import the leases from your DHCP server to see which IPs are handed out, plus each VLAN's load at a glance. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
 
 Nothing to install or download: the link opens the tool with a sample office. Hit **▶ Ver demo** for the guided tour.
 
@@ -43,6 +43,15 @@ Nothing to install or download: the link opens the tool with a sample office. Hi
 - **Next free IP** button on every subnet: jumps to it and opens the card.
 - **Search** by IP, device name or MAC, highlighting the cell and expanding its block.
 - **Multi-select** (click, drag or Shift+click) to reserve or release whole ranges at once.
+
+**DHCP leases**
+- Import the leases you export from your DHCP server: **Windows Server** (`Get-DhcpServerv4Lease | Export-Csv`), **pfSense / Linux** (`dhcpd.leases`), **MikroTik**, **Kea** or a CSV with IP, MAC, name and expiry.
+- Leased IPs are painted on the grid with their device, MAC and expiry date, and "next free IP" skips them.
+- Warns when DHCP has leased an IP you documented as static for another device, and when the leases are more than a day old.
+- It never connects to the server: export, import, done.
+
+**VLAN load**
+- Every VLAN shows its percentage of used IPs (assigned, reserved, gateway and leased) and can be sorted from most to least loaded, with a warning from 80 %.
 
 **Dual-stack IPv6**
 - Every subnet can carry its **IPv6 prefix** and IPv6 gateway alongside IPv4.

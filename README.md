@@ -12,7 +12,7 @@ Es la herramienta hermana de **[RackScope](https://github.com/marcosblg/rackscop
 
 ### 👉 [Pruébalo ahora en el navegador](https://marcosblg.github.io/subnetscope/)
 
-> 🆕 **v1.1** (11 de octubre de 2026): IPv6 en doble pila y reglas NAT documentadas, pedidas en los comentarios. [Ver las novedades](CHANGELOG.md)
+> 🆕 **v1.2** (13 de octubre de 2026): importa las concesiones de tu servidor DHCP y ve qué IPs están prestadas, y la carga de cada VLAN de un vistazo. [Ver las novedades](CHANGELOG.md)
 
 No hay que instalar ni descargar nada: el enlace abre la herramienta con una oficina de ejemplo. Pulsa **▶ Ver demo** para la visita guiada.
 
@@ -43,6 +43,15 @@ No hay que instalar ni descargar nada: el enlace abre la herramienta con una ofi
 - Botón **Siguiente IP libre** en cada subred: te lleva a ella y abre la ficha.
 - **Buscador** por IP, nombre de equipo o MAC, que resalta la casilla y despliega su bloque.
 - **Selección múltiple** (clic, arrastrar o Shift+clic) para reservar o liberar rangos enteros de golpe.
+
+**Concesiones DHCP**
+- Importa las concesiones que exportes de tu servidor DHCP: **Windows Server** (`Get-DhcpServerv4Lease | Export-Csv`), **pfSense / Linux** (`dhcpd.leases`), **MikroTik**, **Kea** o un CSV con IP, MAC, nombre y caducidad.
+- Las IPs prestadas se pintan en la cuadrícula con su equipo, su MAC y la fecha de caducidad, y "Siguiente IP libre" se las salta.
+- Avisa si el DHCP ha prestado una IP que tienes documentada como fija para otro equipo, y si las concesiones llevan más de un día sin actualizarse.
+- No se conecta al servidor: exportas, importas y listo.
+
+**Carga por VLAN**
+- Cada VLAN muestra su porcentaje de IPs ocupadas (asignadas, reservadas, enlace y prestadas) y se pueden ordenar de más a menos cargada, con aviso a partir del 80 %.
 
 **IPv6 en doble pila**
 - Cada subred puede llevar su **prefijo IPv6** y su puerta de enlace IPv6 junto al IPv4.

@@ -2,6 +2,15 @@
 
 # Novedades de SubnetScope
 
+## v1.2 — 13 de octubre de 2026
+
+Pedido en los comentarios: ver qué IPs están prestadas de verdad y qué VLAN va más cargada.
+
+- **Concesiones DHCP**: importa las que exportes de tu servidor (Windows Server con `Export-Csv`, pfSense o Linux con `dhcpd.leases`, MikroTik, Kea o un CSV genérico). Las IPs prestadas se ven en la cuadrícula con su equipo, MAC y caducidad, aparecen en el buscador y en el CSV, y "Siguiente IP libre" se las salta. No se conecta al servidor.
+- Avisa si el DHCP ha prestado una IP documentada como fija para otro equipo (posible conflicto) y si las concesiones llevan más de un día sin actualizarse.
+- **Carga por VLAN**: porcentaje de IPs ocupadas de cada VLAN, con orden de más a menos cargada y aviso a partir del 80 %.
+- Corregida una errata en el contador de direcciones IPv6.
+
 ## v1.1 — 11 de octubre de 2026
 
 Lo más pedido en los comentarios del lanzamiento. ¡Gracias!
@@ -29,6 +38,14 @@ Primera versión pública.
 ---
 
 # What's new in SubnetScope
+
+## v1.2 — October 13, 2026
+
+Requested in the comments: see which IPs are really handed out and which VLAN is busiest.
+
+- **DHCP leases**: import them from your server's export (Windows Server `Export-Csv`, pfSense or Linux `dhcpd.leases`, MikroTik, Kea or a generic CSV). Leased IPs show on the grid with device, MAC and expiry, appear in search and CSV, and "next free IP" skips them. It never connects to the server.
+- Warns when DHCP has leased an IP documented as static for another device (possible conflict) and when the leases are more than a day old.
+- **VLAN load**: percentage of used IPs per VLAN, sortable from most to least loaded, with a warning from 80 %.
 
 ## v1.1 — October 11, 2026
 
