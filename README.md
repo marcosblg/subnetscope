@@ -115,4 +115,8 @@ Proyecto personal, hecho para resolver un problema real de trabajo. Se publica p
 
 ## Licencia
 
-MIT. Haz lo que quieras con él.
+AGPL-3.0. Puedes usarlo y modificarlo libremente, también dentro de tu empresa. Si distribuyes una versión modificada o la ofreces como servicio, tienes que publicar el código con esta misma licencia. Las versiones anteriores a la v1.5 se publicaron bajo MIT y siguen siéndolo.
+
+El nombre **SubnetScope** y su identidad visual no entran en la licencia del código: si publicas un derivado, ponle otro nombre.
+
+**¿Lo usáis en vuestra empresa?** Si necesitáis una licencia que no obligue a publicar vuestro código, o soporte, escribidme por LinkedIn: https://es.linkedin.com/in/marcos-belmonte-gomez-9b5a71205
