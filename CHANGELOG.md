@@ -2,6 +2,10 @@
 
 # Novedades de SubnetScope
 
+## v1.5 — 15 de octubre de 2026
+
+- **Licencia**: pasa de MIT a AGPL-3.0. Las versiones anteriores siguen bajo MIT.
+
 ## v1.4 — 14 de octubre de 2026
 
 - **Deshacer y rehacer** con Ctrl+Z / Ctrl+Y, o con ↶ ↷ en la barra.
@@ -53,6 +57,10 @@ Primera versión pública.
 ---
 
 # What's new in SubnetScope
+
+## v1.5 — October 15, 2026
+
+- **License**: changes from MIT to AGPL-3.0. Earlier versions remain under MIT.
 
 ## v1.4 — October 14, 2026
 
