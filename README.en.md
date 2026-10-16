@@ -10,6 +10,8 @@ It was built to replace the usual IP addressing spreadsheet: the one that is nev
 
 It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**, which documents rack cabling. You can import the devices you already have in RackScope into SubnetScope and assign them IPs without typing them again.
 
+And of **[AssetScope](https://github.com/marcosblg/assetscope)**, the family's inventory tool: what each device is and when its warranty or support runs out. [Try it](https://marcosblg.github.io/assetscope/).
+
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
 > 🆕 **v1.4** (October 14, 2026): undo with Ctrl+Z. On top of v1.3: DHCP reservations shown with their owner even when the device is off, and the pool read from the server itself. A MikroTik `/export` brings everything at once. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)

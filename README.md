@@ -10,6 +10,8 @@ Nació para sustituir la típica hoja de cálculo de direccionamiento: la que nu
 
 Es la herramienta hermana de **[RackScope](https://github.com/marcosblg/rackscope)**, que documenta el cableado de los racks. Puedes importar en SubnetScope los equipos que ya tengas en RackScope y darles IP sin volver a teclearlos.
 
+Y de **[AssetScope](https://github.com/marcosblg/assetscope)**, el inventario de la familia: qué es cada equipo y cuándo vence su garantía o su soporte. [Pruébala](https://marcosblg.github.io/assetscope/).
+
 ### 👉 [Pruébalo ahora en el navegador](https://marcosblg.github.io/subnetscope/)
 
 > 🆕 **v1.4** (14 de octubre de 2026): deshacer con Ctrl+Z. Viene de la v1.3: reservas del DHCP con su dueño aunque el equipo no esté encendido, y el pool leído del propio servidor. Con un `/export` de MikroTik sale todo de golpe. [Ver las novedades](CHANGELOG.md)
