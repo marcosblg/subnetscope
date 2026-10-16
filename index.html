@@ -395,6 +395,676 @@ body.ms #msbar{display:flex}
 <div id="print"></div>
 <div id="legend"></div>
 
+<script id="i18n">
+"use strict";
+/* ---------- idioma: espanol / ingles ----------
+   La aplicacion se escribe en espanol. Si el navegador esta en otro idioma (o se elige EN),
+   cada texto que aparece en pantalla se cambia por su traduccion al pintarse: textos, avisos
+   (title), marcadores de los campos, ventanas de confirmacion y el titulo de la pagina.
+   Los datos que escribe el usuario no se tocan: solo se traduce lo que esta en el diccionario. */
+const I18N=(()=>{
+  const LK="subnetscope.lang";
+  let lang="es";
+  try{const s=localStorage.getItem(LK);lang=s==="en"||s==="es"?s:((navigator.language||"es").toLowerCase().startsWith("es")?"es":"en");}
+  catch(e){lang=(navigator.language||"es").toLowerCase().startsWith("es")?"es":"en";}
+  const D=new Map(Object.entries({
+"SubnetScope — planificador de IPs y VLANs": "SubnetScope — IP and VLAN planner",
+"plan de IPs y VLANs ·": "IP and VLAN plan ·",
+"Ver novedades": "What's new",
+"Novedades de SubnetScope": "What's new in SubnetScope",
+"Ver todas": "See all",
+"Entendido": "Got it",
+"Sede": "Site",
+"Cambiar de sede o red": "Change site or network",
+"Nueva sede": "New site",
+"Renombrar, duplicar o eliminar la sede": "Rename, duplicate or delete the site",
+"Mostrar u ocultar el panel de VLANs y subredes": "Show or hide the VLAN and subnet panel",
+"Buscar IP, equipo o MAC…": "Search IP, device or MAC…",
+"Escribe el zoom que quieras (50–160 %)": "Type any zoom you like (50–160 %)",
+"Zoom": "Zoom",
+"Tamaño normal": "Normal size",
+"Deshacer (Ctrl+Z)": "Undo (Ctrl+Z)",
+"Rehacer (Ctrl+Y)": "Redo (Ctrl+Y)",
+"Deshecho": "Undone",
+"Rehecho": "Redone",
+"No hay nada que deshacer": "Nothing to undo",
+"No hay nada que rehacer": "Nothing to redo",
+"Restaurado": "Restored",
+"Cambiar tema": "Change theme",
+"Cambiar a tema claro": "Switch to light theme",
+"Cambiar a tema oscuro": "Switch to dark theme",
+"Demostración automática": "Automatic demo",
+"▶ Ver demo": "▶ Watch demo",
+"✕ salir": "✕ exit",
+"Marcar varias IPs para reservarlas o liberarlas de golpe": "Mark several IPs to reserve or release them at once",
+"▦ Selección": "▦ Selection",
+"⭳ Exportar ▾": "⭳ Export ▾",
+"Solo esta sede": "This site only",
+"Todas las sedes": "All sites",
+"🖼 Imagen PNG": "🖼 PNG image",
+"Las cuadrículas de todas las subredes": "The grids of every subnet",
+"📄 PDF / Imprimir": "📄 PDF / Print",
+"Plan por subred + tabla de VLANs (elige \"Guardar como PDF\")": "Plan per subnet + VLAN table (choose \"Save as PDF\")",
+"📊 Excel (CSV)": "📊 Excel (CSV)",
+"Todas las IPs asignadas y reservadas, IPv4 e IPv6": "Every assigned and reserved IP, IPv4 and IPv6",
+"🔀 Reglas NAT (CSV)": "🔀 NAT rules (CSV)",
+"Qué se publica hacia Internet": "What is published to the Internet",
+"🔁 Pasar las IPs a RackScope": "🔁 Send the IPs to RackScope",
+"Escribe las IPs en un JSON de RackScope que elijas": "Writes the IPs into a RackScope JSON of your choice",
+"💾 Copia de seguridad (JSON)": "💾 Backup (JSON)",
+"Para volver a importarlo aquí": "To import it back here",
+"Guardar automáticamente en un archivo tuyo": "Save automatically to a file of your own",
+"💾 Archivo": "💾 File",
+"Copia de seguridad de SubnetScope o JSON exportado de RackScope": "SubnetScope backup or JSON exported from RackScope",
+"Importar": "Import",
+"Reiniciar": "Reset",
+"Guardado en el navegador": "Saved in the browser",
+"Vincula un archivo para no depender del navegador": "Link a file so you don't depend on the browser",
+"Se guarda solo en tu archivo y en el navegador": "Saves itself to your file and to the browser",
+"⚠ SIN GUARDAR": "⚠ NOT SAVED",
+"El navegador no permite guardar: vincula un archivo o exporta el JSON": "The browser can't save: link a file or export the JSON",
+"⚠ Este navegador no guarda datos de archivos locales:": "⚠ This browser doesn't keep data for local files:",
+"si cierras, pierdes el trabajo": "if you close it, you lose your work",
+"Guardar en un archivo": "Save to a file",
+"Exportar JSON": "Export JSON",
+"Selección múltiple": "Multiple selection",
+"Reservar": "Reserve",
+"Liberar": "Release",
+"Quitar selección": "Clear selection",
+"Salir": "Exit",
+"clic marca o desmarca ·": "click marks or unmarks ·",
+"arrastrar": "drag",
+"marca un tramo ·": "marks a range ·",
+"Shift+clic": "Shift+click",
+"marca desde la última · fuera de este modo,": "marks from the last one · outside this mode,",
+"Ctrl/Shift+clic": "Ctrl/Shift+click",
+"también selecciona": "also selects",
+"VLANs": "VLANs",
+"Ordenar las VLAN por carga o por ID": "Sort VLANs by load or by ID",
+"⇅ Carga": "⇅ Load",
+"＋ VLAN": "＋ VLAN",
+"Subredes": "Subnets",
+"Proponer un prefijo IPv6 /64 para cada subred": "Propose an IPv6 /64 prefix for each subnet",
+"IPv6…": "IPv6…",
+"＋ Subred": "＋ Subnet",
+"＋ subred": "＋ subnet",
+"Concesiones DHCP": "DHCP leases",
+"Importar las concesiones exportadas del servidor DHCP": "Import the leases exported from the DHCP server",
+"⇣ Importar": "⇣ Import",
+"Reglas NAT": "NAT rules",
+"＋ Regla": "＋ Rule",
+"Equipos sin IP": "Devices without IP",
+"Traer la lista de equipos de un JSON exportado de RackScope": "Bring in the device list from a JSON exported from RackScope",
+"⇣ RackScope": "⇣ RackScope",
+"Libre": "Free",
+"Asignada": "Assigned",
+"Reservada": "Reserved",
+"Rango DHCP": "DHCP range",
+"Prestada (DHCP)": "Leased (DHCP)",
+"Reserva del DHCP": "DHCP reservation",
+"Puerta de enlace": "Gateway",
+"Red": "Network",
+"Broadcast": "Broadcast",
+"Red y broadcast": "Network and broadcast",
+"Estados": "States",
+"El punto indica que hay un equipo apuntado en la puerta de enlace": "The dot means a device is recorded on the gateway",
+"Enlace con equipo": "Gateway with device",
+"Alguna regla NAT publica esta IP hacia Internet": "A NAT rule publishes this IP to the Internet",
+"Con regla NAT": "With NAT rule",
+"Servidor": "Server",
+"Switch": "Switch",
+"Impresora": "Printer",
+"PC": "PC",
+"Cámara": "Camera",
+"Punto de acceso": "Access point",
+"Máquina virtual": "Virtual machine",
+"Otro": "Other",
+"Concesión DHCP": "DHCP lease",
+"Concesión caducada": "Expired lease",
+"En uso ahora": "In use now",
+"Sin uso ahora": "Not in use now",
+"Esta sede no tiene subredes todavía.": "This site has no subnets yet.",
+"Crea primero las VLAN con": "First create the VLANs with",
+"en el panel de la izquierda y después cada subred con": "in the left panel and then each subnet with",
+"Esta VLAN no tiene subredes todavía": "This VLAN has no subnets yet",
+"sin VLAN": "no VLAN",
+"— sin VLAN —": "— no VLAN —",
+"Siguiente IP libre": "Next free IP",
+"⇢ Siguiente IP libre": "⇢ Next free IP",
+"Ir a la primera IP libre de esta subred": "Go to the first free IP in this subnet",
+"Editar subred": "Edit subnet",
+"Dividir": "Split",
+"Dividir en subredes más pequeñas (calculadora)": "Split into smaller subnets (calculator)",
+"Eliminar subred": "Delete subnet",
+"Máscara": "Mask",
+"DHCP": "DHCP",
+"DNS": "DNS",
+"IPv6": "IPv6",
+"IPv6:": "IPv6:",
+"DHCP:": "DHCP:",
+"NAT:": "NAT:",
+"NAT": "NAT",
+"WAN": "WAN",
+"sin libres": "none free",
+"sin IPs libres": "no free IPs",
+"sin rango": "no range",
+"· DHCP": "· DHCP",
+"· IPv6": "· IPv6",
+"· VLAN": "· VLAN",
+"· broadcast": "· broadcast",
+"· enlace": "· gateway",
+"· máscara": "· mask",
+"· puerta de enlace": "· gateway",
+"puerta de enlace": "gateway",
+"rango DHCP": "DHCP range",
+"rangos DHCP": "DHCP ranges",
+"Asignar": "Assign",
+"Guardar reserva": "Save reservation",
+"Nombre": "Name",
+"Tipo": "Type",
+"MAC": "MAC",
+"Nota": "Note",
+"Historial": "History",
+"srv-app-01, imp-recepcion…": "srv-app-01, printer-reception…",
+"Escribe el nombre del equipo": "Type the device name",
+"MAC no válida: usa el formato 00:11:22:33:44:55": "Invalid MAC: use the format 00:11:22:33:44:55",
+"Motivo (opcional)": "Reason (optional)",
+"Clic para asignarla": "Click to assign it",
+"sin nombre": "no name",
+"SIN NOMBRE": "NO NAME",
+"No se asigna a ningún equipo.": "It isn't assigned to any device.",
+"Reserva DHCP:": "DHCP reservation:",
+"Reserva del servidor DHCP": "DHCP server reservation",
+"Arrastra para mover la ventana": "Drag to move the window",
+"Publicada hacia fuera (NAT)": "Published outside (NAT)",
+"Ninguna regla apunta a esta IP": "No rule points to this IP",
+"＋ Regla NAT para esta IP": "＋ NAT rule for this IP",
+"sin fecha de caducidad": "no expiry date",
+"La MAC no coincide con la documentada: puede haber un conflicto de IP.": "The MAC doesn't match the documented one: there may be an IP conflict.",
+"No coincide con el equipo documentado: revisa cuál es el bueno.": "It doesn't match the documented device: check which one is right.",
+"ya está documentada": "is already documented",
+"ya lo usa:": "already used by:",
+"ya está en": "is already in",
+"Nueva VLAN": "New VLAN",
+"Editar VLAN": "Edit VLAN",
+"ID (1–4094)": "ID (1–4094)",
+"ID": "ID",
+"Color": "Colour",
+"Descripción": "Description",
+"Usuarios, Servidores, Voz…": "Users, Servers, Voice…",
+"Qué va en esta VLAN": "What goes in this VLAN",
+"Ponle un nombre a la VLAN": "Give the VLAN a name",
+"El ID de VLAN tiene que estar entre 1 y 4094": "The VLAN ID must be between 1 and 4094",
+"¿Eliminar la VLAN": "Delete VLAN",
+"Nueva subred": "New subnet",
+"Red (CIDR, de /16 a /30)": "Network (CIDR, /16 to /30)",
+"VLAN": "VLAN",
+"Nombre o descripción": "Name or description",
+"Usuarios planta 1, Servidores CPD…": "Floor 1 users, Server room servers…",
+"DNS (separados por comas)": "DNS (comma-separated)",
+"DHCP desde (opcional)": "DHCP from (optional)",
+"DHCP hasta": "DHCP to",
+"Prefijo IPv6 (opcional)": "IPv6 prefix (optional)",
+"Puerta de enlace IPv6": "IPv6 gateway",
+"Escribe la dirección de red y el prefijo.": "Type the network address and the prefix.",
+"Formato incorrecto: escribe la red y el prefijo, p. ej. 192.168.10.0/24": "Wrong format: type the network and the prefix, e.g. 192.168.10.0/24",
+"El prefijo tiene que estar entre /16 y /30": "The prefix must be between /16 and /30",
+"El prefijo IPv6 tiene que estar entre /16 y /128": "The IPv6 prefix must be between /16 and /128",
+"Formato del prefijo IPv6: 2001:db8:10::/64": "IPv6 prefix format: 2001:db8:10::/64",
+"DNS no válido:": "Invalid DNS:",
+"El rango DHCP está al revés: el inicio es mayor que el final": "The DHCP range is backwards: the start is higher than the end",
+"El rango DHCP tiene que estar dentro de": "The DHCP range must be inside",
+"La puerta de enlace tiene que ser una IP útil de": "The gateway must be a usable IP of",
+"La puerta de enlace IPv6 tiene que estar dentro de": "The IPv6 gateway must be inside",
+"no es la dirección de red de un /": "isn't the network address of a /",
+": la correcta es": ": the right one is",
+"no es el inicio de un /": "isn't the start of a /",
+": el correcto es": ": the right one is",
+"se solapa con": "overlaps",
+"se solapa con el prefijo IPv6 de": "overlaps the IPv6 prefix of",
+"⚠ Se solapa con": "⚠ Overlaps",
+"no es una dirección IPv4 válida": "isn't a valid IPv4 address",
+"no es una dirección IPv6 válida": "isn't a valid IPv6 address",
+"Todavía no hay ninguna VLAN en esta sede. ¿Crear la subred sin VLAN? (Cancelar para crear antes la VLAN)": "There's no VLAN in this site yet. Create the subnet without a VLAN? (Cancel to create the VLAN first)",
+"¿Eliminar la subred": "Delete subnet",
+"Crea antes alguna subred": "Create a subnet first",
+"Rango útil": "Usable range",
+"IPs útiles:": "Usable IPs:",
+"da para": "gives",
+"más de un millón de": "over a million",
+"Partir en": "Split into",
+"dividida en": "split into",
+"tramos)": "ranges)",
+"Una /30 no se puede dividir más": "A /30 can't be split any further",
+"El prefijo IPv6 y sus direcciones se quedan en la primera parte.": "The IPv6 prefix and its addresses stay in the first part.",
+"Aplicar": "Apply",
+"Cancelar": "Cancel",
+"Guardar": "Save",
+"Cerrar": "Close",
+"Crear": "Create",
+"Duplicar": "Duplicate",
+"Editar": "Edit",
+"Quitar": "Remove",
+"Subir": "Move up",
+"Bajar": "Move down",
+"Plan IPv6": "IPv6 plan",
+"Escribe el prefijo que te da el operador (normalmente un /48 o un /56) y se propone un /64 para cada subred. Con un /48 se usa el ID de VLAN como identificador de subred (VLAN 10 → …:10::/64), que es lo más fácil de recordar.": "Type the prefix your ISP gives you (usually a /48 or /56) and a /64 is proposed for each subnet. With a /48 the VLAN ID is used as the subnet identifier (VLAN 10 → …:10::/64), which is the easiest to remember.",
+"Prefijo de la sede": "Site prefix",
+"Proponer de nuevo": "Propose again",
+"Mantener su prefijo": "Keep its prefix",
+"Subredes que ya tienen IPv6": "Subnets that already have IPv6",
+"Escribe antes el prefijo IPv6": "Type the IPv6 prefix first",
+"subredes con prefijo IPv6.": "subnets with an IPv6 prefix.",
+"Nueva dirección IPv6": "New IPv6 address",
+"Dirección IPv6": "IPv6 address",
+"Dirección IPv6 no válida": "Invalid IPv6 address",
+"＋ Dirección IPv6": "＋ IPv6 address",
+"Se guarda en su forma corta (RFC 5952). Si eliges un equipo que ya tiene IPv4 en esta subred, se copian su tipo y su MAC.": "It's stored in its short form (RFC 5952). If you pick a device that already has IPv4 in this subnet, its type and MAC are copied.",
+"Sin direcciones IPv6 fijas. Los equipos que toman su IPv6 por SLAAC o DHCPv6 no hace falta apuntarlos.": "No fixed IPv6 addresses. Devices that get their IPv6 via SLAAC or DHCPv6 don't need to be recorded.",
+"direcciones fijas": "fixed addresses",
+"dirección fija": "fixed address",
+"La dirección tiene que estar dentro de": "The address must be inside",
+"direcciones IPv6 quedan fuera del prefijo y se perderán. ¿Seguir?": "IPv6 addresses fall outside the prefix and will be lost. Continue?",
+"Dirección": "Address",
+"Estado": "Status",
+"Equipo": "Device",
+"Nueva regla NAT": "New NAT rule",
+"Regla NAT": "NAT rule",
+"IP pública": "Public IP",
+"Puerto público": "Public port",
+"Protocolo": "Protocol",
+"IP interna": "Internal IP",
+"Puerto interno": "Internal port",
+"443 o 5000-5010": "443 or 5000-5010",
+"Web corporativa, VPN…": "Corporate website, VPN…",
+"Escribe la IP interna": "Type the internal IP",
+"IP pública no válida": "Invalid public IP",
+"Puerto no válido: usa 443 o un rango como 5000-5010": "Invalid port: use 443 or a range like 5000-5010",
+"Solo se documenta: SubnetScope no se conecta al firewall ni cambia nada en él.": "Documentation only: SubnetScope never connects to the firewall or changes anything on it.",
+"Regla NAT guardada": "NAT rule saved",
+"Regla NAT eliminada.": "NAT rule deleted.",
+"No hay reglas NAT documentadas": "No NAT rules documented",
+"IP interna sin documentar": "Internal IP not documented",
+"IP interna fuera de las subredes": "Internal IP outside the subnets",
+"puerto público repetido": "duplicate public port",
+"El puerto público": "The public port",
+"TCP": "TCP",
+"UDP": "UDP",
+"TCP/UDP": "TCP/UDP",
+"Datos del servidor DHCP": "DHCP server data",
+"Importado del DHCP:": "Imported from DHCP:",
+"Actualizar": "Update",
+"Datos del DHCP quitados.": "DHCP data removed.",
+"Lo que trae el archivo sustituye a lo importado antes del mismo tipo (concesiones o reservas). No se toca nada de lo documentado a mano.": "What the file brings replaces what was imported before of the same type (leases or reservations). Nothing documented by hand is touched.",
+"MikroTik RouterOS": "MikroTik RouterOS",
+"Windows Server (Export-Csv)": "Windows Server (Export-Csv)",
+"Windows Server (reservas)": "Windows Server (reservations)",
+"Windows Server (ámbitos)": "Windows Server (scopes)",
+"ISC dhcpd.leases (pfSense, Linux)": "ISC dhcpd.leases (pfSense, Linux)",
+"ISC dhcpd.conf (pfSense, Linux)": "ISC dhcpd.conf (pfSense, Linux)",
+"Kea (CSV)": "Kea (CSV)",
+"Kea (kea-dhcp4.conf)": "Kea (kea-dhcp4.conf)",
+"dhcp-leases.csv (ejemplo)": "dhcp-leases.csv (sample)",
+"concesión": "lease",
+"caduca el": "expires on",
+"caducada el": "expired on",
+"en uso ahora,": "in use now,",
+"sin uso,": "not in use,",
+"· en uso ahora": "· in use now",
+"· sin uso ahora": "· not in use now",
+"· importado el": "· imported on",
+"fuera del pool)": "outside the pool)",
+"fuera de las subredes)": "outside the subnets)",
+"reserva modificada": "reservation changed",
+"sin cambios": "no changes",
+": si la fijas, exclúyela también en el servidor DHCP.": ": if you make it static, exclude it on the DHCP server too.",
+"Equipos de RackScope": "RackScope devices",
+"De RackScope:": "From RackScope:",
+"asignada desde RackScope": "assigned from RackScope",
+"· en RackScope:": "· in RackScope:",
+"Dar IP": "Give IP",
+"Dar IP a": "Give IP to",
+"Quitar de la lista": "Remove from the list",
+"Se le da la primera IP libre de la subred elegida (fuera del rango DHCP).": "It gets the first free IP of the chosen subnet (outside the DHCP range).",
+"No quedan IPs libres en esa subred": "No free IPs left in that subnet",
+"El resto pasa a la lista": "The rest go to the list",
+"del panel izquierdo, desde donde les das IP con un clic.": "in the left panel, where you give them an IP with one click.",
+"a la lista de equipos sin IP": "to the list of devices without IP",
+"Generar JSON para RackScope": "Generate JSON for RackScope",
+"Pasar las IPs a RackScope": "Send the IPs to RackScope",
+"(se busca por nombre de host).": "(matched by host name).",
+"no aparecen en": "don't appear in",
+"ya la tenían bien y": "already had it right and",
+"con IP asignada ·": "with an assigned IP ·",
+"Nueva sede o red": "New site or network",
+"Oficina central, Almacén, Laboratorio…": "Head office, Warehouse, Lab…",
+"Empezar": "Start",
+"En blanco — voy documentando desde cero": "Blank — I'll document from scratch",
+"Con la red de ejemplo": "With the sample network",
+"Copiando la sede actual (": "Copying the current site (",
+"IPs documentadas": "documented IPs",
+"Eliminar sede": "Delete site",
+"Sede duplicada": "Site duplicated",
+"Sede reiniciada.": "Site reset.",
+"Debe quedar al menos una sede": "At least one site must remain",
+"Oficina de ejemplo": "Sample office",
+"ninguna sede": "no site",
+"Archivo vinculado": "Linked file",
+"Se guarda solo en": "It saves itself to",
+"cada vez que cambias algo.": "every time you change something.",
+"Abrir otro archivo…": "Open another file…",
+"Vincular archivo nuevo…": "Link a new file…",
+"Abrir uno que ya tenga…": "Open one I already have…",
+"Ahora no": "Not now",
+"Elegir archivo…": "Choose file…",
+"Ahora mismo los datos viven": "Right now the data lives",
+"solo en este navegador": "only in this browser",
+", atados a la carpeta donde está el HTML. Si descargas otra copia del programa en otra ruta, o cambias de equipo o de navegador, ese trabajo no viaja contigo.": ", tied to the folder the HTML is in. If you download another copy of the program to another path, or change computer or browser, that work doesn't travel with you.",
+"Si vinculas un archivo, la aplicación lo reescribe sola cada vez que cambias algo. Ese archivo es tuyo: lo copias, lo guardas en red o en una nube y lo vuelves a abrir desde cualquier copia del programa.": "If you link a file, the app rewrites it every time you change something. The file is yours: copy it, keep it on the network or in a cloud and open it again from any copy of the program.",
+"Tu navegador no permite vincular archivo: usa Exportar › JSON": "Your browser can't link a file: use Export › JSON",
+"Usa Importar para cargar el JSON": "Use Import to load the JSON",
+"No se pudo abrir el archivo": "Couldn't open the file",
+"No se pudo escribir en el archivo vinculado": "Couldn't write to the linked file",
+"tu archivo": "your file",
+"Plan de IPs": "IP plan",
+"Importadas": "Imported",
+"Añadidas": "Added",
+"El archivo trae": "The file has",
+"Ahora mismo tienes": "Right now you have",
+"Añadir a lo que tengo": "Add to what I have",
+"Sustituir todo": "Replace everything",
+"No se ha podido importar": "Couldn't import",
+"El archivo “": "The file “",
+"Importar “": "Import “",
+"Importar a “": "Import into “",
+"No se ha podido leer el archivo “": "Couldn't read the file “",
+"” es un JSON, pero no es una copia de SubnetScope ni un JSON de RackScope.": "” is a JSON file, but neither a SubnetScope backup nor a RackScope JSON.",
+"” es de RackScope, pero no tiene equipos con IP posible (solo paneles de parcheo o huecos).": "” is from RackScope, but has no devices that could take an IP (only patch panels or gaps).",
+"Empieza por:": "It starts with:",
+"En RackScope: Exportar › Copia de seguridad (JSON).": "In RackScope: Export › Backup (JSON).",
+"Formatos que entiende:": "Formats it understands:",
+"” no parece un JSON de RackScope (no encuentro salas ni racks).": "” doesn't look like a RackScope JSON (no rooms or racks found).",
+"” no parece una exportación de un servidor DHCP.": "” doesn't look like a DHCP server export.",
+"” no es un JSON válido.": "” isn't a valid JSON file.",
+"· pfSense / Linux: dhcpd.leases o dhcpd.conf": "· pfSense / Linux: dhcpd.leases or dhcpd.conf",
+"· MikroTik: /export del router, /ip dhcp-server lease export o print detail (copiado a un .txt)": "· MikroTik: the router's /export, /ip dhcp-server lease export or print detail (copied to a .txt)",
+"· Kea: kea-dhcp4.conf o el CSV de concesiones": "· Kea: kea-dhcp4.conf or the leases CSV",
+"· Un CSV con columnas IP, MAC, Nombre y Caduca": "· A CSV with IP, MAC, Name and Expires columns",
+"Debería haberse descargado ya. Si no aparece nada (algunos navegadores bloquean las descargas cuando el HTML se abre desde una carpeta local), usa los botones de abajo": "It should have downloaded already. If nothing shows up (some browsers block downloads when the HTML is opened from a local folder), use the buttons below",
+"o haz clic derecho sobre la imagen y elige «Guardar imagen como…»": "or right-click the image and choose «Save image as…»",
+"Copiar todo": "Copy all",
+"Abrir en pestaña nueva": "Open in a new tab",
+"Descargar otra vez": "Download again",
+"Copiado al portapapeles": "Copied to clipboard",
+"Selecciona el texto y copia con Ctrl+C": "Select the text and copy with Ctrl+C",
+"El navegador ha bloqueado la ventana nueva": "The browser blocked the new window",
+"Preparando documento…": "Preparing document…",
+"Elige \"Guardar como PDF\" en el diálogo": "Choose \"Save as PDF\" in the dialog",
+"Generando imagen…": "Generating image…",
+"Imagen demasiado grande": "Image too large",
+"No se pudo generar la imagen": "Couldn't generate the image",
+"Generado el": "Generated on",
+"con SubnetScope ·": "with SubnetScope ·",
+"Plan de direccionamiento IP —": "IP addressing plan —",
+"SEDE:": "SITE:",
+"VLAN ·": "VLAN ·",
+"Nombre VLAN": "VLAN name",
+"Subred": "Subnet",
+"IPs en uso": "IPs in use",
+"Uso": "Usage",
+"Resumen de subredes": "Subnet summary",
+"Sin IPs documentadas": "No documented IPs",
+"Rack": "Rack",
+"Sala": "Room",
+"— el plan de IPs y VLANs de tu red en un solo archivo HTML": "— your network's IP and VLAN plan in a single HTML file",
+"Cada": "Each",
+"con su ID, nombre y color; cada subred, colgada de su VLAN": "with its ID, name and colour; each subnet hangs off its VLAN",
+"Una casilla por IP: libre, asignada, reservada, DHCP, puerta de enlace, red y broadcast": "One cell per IP: free, assigned, reserved, DHCP, gateway, network and broadcast",
+"Clic en una casilla": "Click a cell",
+": equipo, tipo, MAC y nota. Asignar, reservar o liberar": ": device, type, MAC and note. Assign, reserve or release",
+"Contador por subred y botón": "Counter per subnet and a",
+": te lleva directo a ella": " button: takes you straight to it",
+"Las redes mayores de /24 se parten en": "Networks larger than /24 are split into",
+"bloques /24 plegables": "collapsible /24 blocks",
+"Buscador": "Search",
+"por IP, nombre de equipo o MAC: resalta la casilla al momento": "by IP, device name or MAC: highlights the cell instantly",
+"para reservar o liberar rangos enteros de golpe": "to reserve or release whole ranges at once",
+"Importa los equipos de": "Import the devices from",
+"y dales IP sin teclearlos otra vez": "and give them IPs without typing them again",
+"Y el plan sale en": "And the plan comes out as",
+"CSV, PDF, PNG o JSON": "CSV, PDF, PNG or JSON",
+"Tema claro y oscuro, varias sedes y todo guardado en tu equipo": "Light and dark theme, several sites and everything saved on your computer",
+"· hermana de RackScope · gratis y con el código a la vista": "· sister of RackScope · free and open source",
+"Novedades de la v": "What's new in v",
+"14 de octubre de 2026": "October 14, 2026",
+"13 de octubre de 2026": "October 13, 2026",
+"11 de octubre de 2026": "October 11, 2026",
+"9 de octubre de 2026": "October 9, 2026",
+"Deshacer y rehacer con Ctrl+Z / Ctrl+Y (o con ↶ ↷ en la barra).": "Undo and redo with Ctrl+Z / Ctrl+Y (or with ↶ ↷ in the bar).",
+"Zoom escribiendo el porcentaje.": "Zoom by typing the percentage.",
+"El orden de VLANs por carga se recuerda al volver a abrir.": "The VLAN sort by load is remembered when you reopen it.",
+"Reservas del DHCP: las IPs estáticas del servidor (MikroTik, Windows, pfSense, Kea) salen como «Reserva del DHCP» con su dueño, aunque el equipo no esté encendido. «Siguiente IP libre» se las salta.": "DHCP reservations: the server's static IPs (MikroTik, Windows, pfSense, Kea) show as «DHCP reservation» with their owner, even when the device is off. «Next free IP» skips them.",
+"Pool del DHCP: al importar se lee también el rango del servidor y se propone ponerlo como rango DHCP de cada subred, enseñando antes la diferencia.": "DHCP pool: importing also reads the server's range and proposes it as each subnet's DHCP range, showing the difference first.",
+"Con un /export del MikroTik sale todo de golpe: pool, concesiones y reservas. También entiende dhcpd.conf, kea-dhcp4.conf y las reservas y ámbitos de Windows.": "A MikroTik /export brings everything at once: pool, leases and reservations. It also understands dhcpd.conf, kea-dhcp4.conf and Windows reservations and scopes.",
+"Antes, las estáticas de MikroTik entraban como concesiones normales y las reservas inactivas de Windows se descartaban: corregido.": "Before, MikroTik statics came in as normal leases and inactive Windows reservations were dropped: fixed.",
+"Concesiones DHCP: importa las que exportes de tu servidor (Windows Server, pfSense, MikroTik, Kea o un CSV) y verás qué IPs del rango están prestadas, a qué equipo y hasta cuándo. Sin conectarse al servidor.": "DHCP leases: import what you export from your server (Windows Server, pfSense, MikroTik, Kea or a CSV) and see which IPs in the range are leased, to which device and until when. Without connecting to the server.",
+"Avisa si el DHCP ha prestado una IP que tienes documentada como fija para otro equipo, y si las concesiones llevan más de un día sin actualizarse.": "Warns if DHCP has leased an IP you've documented as static for another device, and if the leases haven't been updated for over a day.",
+"Carga por VLAN: cada VLAN muestra su porcentaje de IPs ocupadas y se pueden ordenar de más a menos cargada (⇅ Carga), con aviso a partir del 80 %.": "Load per VLAN: each VLAN shows its percentage of used IPs and they can be sorted from most to least loaded (⇅ Load), with a warning from 80 %.",
+"IPv6 en doble pila: cada subred puede llevar su prefijo IPv6 y su puerta de enlace, con una lista de direcciones IPv6 fijas (equipo, tipo, MAC y nota).": "Dual-stack IPv6: each subnet can have its IPv6 prefix and gateway, with a list of fixed IPv6 addresses (device, type, MAC and note).",
+"Plan IPv6: a partir del /48 o /56 del operador se propone un /64 para cada subred, usando el ID de VLAN cuando se puede. Sirve también de calculadora de prefijos.": "IPv6 plan: from the ISP's /48 or /56 a /64 is proposed for each subnet, using the VLAN ID where possible. It also works as a prefix calculator.",
+"Reglas NAT documentadas: IP y puerto públicos → IP interna, con aviso si dos reglas usan el mismo puerto o apuntan a una IP sin documentar. Las IPs publicadas llevan una marca en la cuadrícula.": "Documented NAT rules: public IP and port → internal IP, with a warning if two rules use the same port or point to an undocumented IP. Published IPs get a mark in the grid.",
+"El buscador, el CSV y el PDF incluyen las direcciones IPv6 y las reglas NAT, que además tienen su propio CSV.": "The search, the CSV and the PDF include IPv6 addresses and NAT rules, which also have their own CSV.",
+"Primera versión pública: sedes, VLANs y subredes de /16 a /30 con aviso de solapes.": "First public release: sites, VLANs and subnets from /16 to /30 with overlap warnings.",
+"Una casilla por IP con su estado, ficha con equipo, tipo, MAC, nota e historial.": "One cell per IP with its state, a record with device, type, MAC, note and history.",
+"Siguiente IP libre, buscador por IP, nombre o MAC, selección múltiple y dividir subredes.": "Next free IP, search by IP, name or MAC, multiple selection and subnet splitting.",
+"Importa los equipos de RackScope y le devuelve las IPs.": "Imports the devices from RackScope and sends the IPs back.",
+"Exportación a CSV, PDF, PNG y JSON, y guardado en archivo vinculado.": "Export to CSV, PDF, PNG and JSON, and saving to a linked file.",
+"Usuarios": "Users",
+"Servidores": "Servers",
+"Voz": "Voice",
+"Invitados": "Guests",
+"Telefonía IP": "IP telephony",
+"Wifi de invitados": "Guest wifi",
+"Usuarios — plantas 0 y 1": "Users — floors 0 and 1",
+"Servidores e infraestructura": "Servers and infrastructure",
+"Puestos de trabajo, impresoras y puntos de acceso": "Workstations, printers and access points",
+"Servidores, almacenamiento, electrónica de red y cámaras": "Servers, storage, network gear and cameras",
+"Telefonía IP: centralita y terminales": "IP telephony: PBX and handsets",
+"Wifi de visitas, aislada de la red interna": "Visitor wifi, isolated from the internal network",
+"Ampliación de virtualización": "Virtualisation expansion",
+"Ampliación, impresoras planta 2…": "Expansion, floor 2 printers…",
+"Planta 1": "Floor 1",
+"Firewall perimetral, puerta de enlace de todas las VLAN": "Perimeter firewall, gateway for every VLAN",
+"Core, rack A": "Core, rack A",
+"Acceso, rack A": "Access, rack A",
+"Planta 1, rack B": "Floor 1, rack B",
+"Controlador de dominio y DNS": "Domain controller and DNS",
+"Controlador de dominio y DNS secundario": "Domain controller and secondary DNS",
+"Servidor de aplicaciones, bonding de 2 NIC": "Application server, 2-NIC bonding",
+"Base de datos": "Database",
+"Host de virtualización": "Virtualisation host",
+"Copias de seguridad": "Backups",
+"Gestión fuera de banda (iLO / iDRAC)": "Out-of-band management (iLO / iDRAC)",
+"Grabador CCTV": "CCTV recorder",
+"SAI 3000 VA, tarjeta de red": "3000 VA UPS, network card",
+"Alojada en srv-vm-01": "Hosted on srv-vm-01",
+"Centralita IP": "IP PBX",
+"Pasarela SIP con el operador": "SIP gateway with the carrier",
+"SIP del operador": "Carrier SIP",
+"Teléfono IP con IP fija": "IP phone with static IP",
+"Videoconferencia (previsto)": "Video conferencing (planned)",
+"Multifunción planta 0": "Floor 0 multifunction printer",
+"Color A3, administración": "A3 colour, admin",
+"Gestión del AP, SSID corporativo": "AP management, corporate SSID",
+"PoE desde sw-p1-01": "PoE from sw-p1-01",
+"Puestos de formación (aula)": "Training desks (classroom)",
+"IP fija por VPN de proveedor": "Static IP for a supplier VPN",
+"Reservadas para el proveedor wifi": "Reserved for the wifi provider",
+"Portal de acceso de invitados": "Guest access portal",
+"Correo entrante": "Inbound mail",
+"Redirección a HTTPS": "Redirect to HTTPS",
+"Web corporativa": "Corporate website",
+"VPN de teletrabajo": "Remote work VPN",
+"subred": "subnet",
+"subredes": "subnets",
+"prestadas": "leased",
+"reservas DHCP": "DHCP reservations",
+"reserva DHCP": "DHCP reservation",
+"en uso ahora": "in use now",
+"sin uso ahora": "not in use now",
+"Es la": "It's the",
+"de la subred. Puedes anotar qué equipo la tiene.": "of the subnet. You can note which device has it.",
+"equipos": "devices",
+"Asignar ya la IP a los": "Assign the IP now to the",
+"Enlace": "Gateway",
+"Con datos": "With data",
+"Está dentro del": "It's inside the",
+"IPs prestadas ahora ·": "IPs leased now ·",
+"IPs prestadas ahora": "IPs leased now",
+"reservas en el DHCP": "DHCP reservations",
+"Aquí aparecen los equipos importados de RackScope que aún no tienen IP en esta sede.": "Devices imported from RackScope that don't have an IP in this site yet show up here.",
+"Ubicación, servicio, responsable…": "Location, service, owner…",
+". Cada parte conserva la VLAN, los DNS y el trozo del rango DHCP que le toque; la puerta de enlace se queda en la parte donde cae y el resto se quedan sin ella.": ". Each part keeps the VLAN, the DNS and its share of the DHCP range; the gateway stays in the part it falls in and the others go without one.",
+". Cada parte conserva la VLAN, los DNS y el trozo del rango DHCP que le toque; la puerta de enlace se queda en la parte donde cae y el resto se quedan sin ella. El prefijo IPv6 y sus direcciones se quedan en la primera parte.": ". Each part keeps the VLAN, the DNS and its share of the DHCP range; the gateway stays in the part it falls in and the others go without one. The IPv6 prefix and its addresses stay in the first part.",
+"IP pública (vacío = la WAN)": "Public IP (empty = the WAN)",
+"Puerto público (vacío = todos)": "Public port (empty = all)",
+"Puerto interno (vacío = el mismo)": "Internal port (empty = the same)",
+"IMP-ALMACEN": "PRINTER-STORE",
+"IMP-PLANTA1-COLOR": "PRINTER-FLOOR1-COLOUR",
+"PROYECTOR-SALA": "PROJECTOR-ROOM",
+"TEL-CONFERENCIAS": "PHONE-CONFERENCE",
+"TV-RECEPCION": "TV-RECEPTION",
+"Inglés: la aplicación sale en inglés si el navegador está en inglés, y con el botón EN / ES se cambia cuando quieras. Los datos que escribes no se tocan; los de ejemplo, sí.": "English: the app shows in English if your browser is in English, and the EN / ES button switches language whenever you like. Your own data is never touched; the sample data is translated.",
+"16 de octubre de 2026": "October 16, 2026"
+}));
+  const P=[
+ [/^PC-USUARIO-(\d+)$/,"PC-USER-$1"],
+ [/^PORTATIL-(\d+)$/,"LAPTOP-$1"],
+ [/^INVITADO-(\d+)$/,"GUEST-$1"],
+ [/^(\d+) \/ (\d+) usadas$/,"$1 / $2 used"],
+ [/^quedan (\d+) libres?$/,"$1 left free"],
+ [/^· quedan (\d+) libres?$/,"· $1 left free"],
+ [/^(\d+) libres?$/,"$1 free"],
+ [/^(\d+) sel\.$/,"$1 sel."],
+ [/^(\d+) VLAN · (\d+) subred(es)? · (\d+) IPs? documentadas?$/,"$1 VLAN · $2 subnet$3 · $4 documented IPs"],
+ [/^Sede "(.+)" creada$/,"Site \"$1\" created"],
+ [/^Sede "(.+)" eliminada\.$/,"Site \"$1\" deleted."],
+ [/^Cargado desde (.+)$/,"Loaded from $1"],
+ [/^Guardado automático en (.+)$/,"Auto-saving to $1"],
+ [/^Pulsa 💾 Archivo para reconectar (.+)$/,"Press 💾 File to reconnect $1"],
+ [/^Generado el (.+?) con SubnetScope · (.+)$/,(m,a,b)=>"Generated on "+a+" with SubnetScope · "+T(b)],
+ [/^Generado el (.+)$/,"Generated on $1"],
+ [/^(\d+(?:\.\d+)*) de (\d+(?:\.\d+)*) IPs ocupadas \(asignadas, reservadas, enlace y prestadas por DHCP\)$/,"$1 of $2 IPs in use (assigned, reserved, gateway and leased by DHCP)"],
+ [/^importado el (.+)$/,"imported on $1"],
+ [/^La usan (\d+) subred\(es\): (.+)$/,(m,n,l)=>"Used by "+n+" subnet"+(n==="1"?"":"s")+": "+l],
+ [/^Editar subred (.+)$/,"Edit subnet $1"],
+ [/^IPs útiles: (.+)$/,"Usable IPs: $1"],
+ [/^(\d+) subredes \/(\d+)$/,"$1 subnets /$2"],
+ [/^(\d+(?:\.\d+)*) IPs útiles cada una$/,"$1 usable IPs each"],
+ [/^para (.+)\. La IP tiene dueño aunque el equipo no esté encendido\.$/,(m,a)=>"for "+T(a)+". The IP has an owner even when the device is off."],
+ [/^puerta de enlace (.+)$/,"gateway $1"],
+ [/^concesiones vigentes en subredes de “(.+)”$/,"current leases in subnets of “$1”"],
+ [/^reservas(?: \((.*)\))?: tienen dueño aunque el equipo no esté encendido$/,(m,x)=>"reservations"+(x?" ("+x.replace(/en uso ahora/,"in use now").replace(/sin uso/,"not in use").replace(/fuera del pool/,"outside the pool")+")":"")+": they have an owner even when the device is off"],
+ [/^tramos? de pool(?: \((\d+) fuera de las subredes\))?$/,(m,n)=>"pool range(s)"+(n?" ("+n+" outside the subnets)":"")],
+ [/^(\d+(?:\.\d+)*) de IPs que no están en ninguna subred de esta sede$/,"$1 IPs that aren't in any subnet of this site"],
+ [/^(\d+(?:\.\d+)*) caducadas, inactivas o desactivadas, que no se importan$/,"$1 expired, inactive or disabled, not imported"],
+ [/^(\d+(?:\.\d+)*) líneas sin una IP válida$/,"$1 lines without a valid IP"],
+ [/^“(.+)” trae$/,"“$1” has"],
+ [/^en (\d+) sala\(s\) \(sin contar paneles de parcheo ni huecos\)\.$/,"in $1 room(s) (not counting patch panels or gaps)."],
+ [/^que la traen escrita en RackScope y caen en una subred de “(.+)”$/,"that have it written in RackScope and fall in a subnet of “$1”"],
+ [/^Novedades de la v(.+)$/,"What's new in v$1"],
+ [/^Plan de direccionamiento IP — (.+)$/,"IP addressing plan — $1"],
+ [/^SEDE: (.+)$/,"SITE: $1"],
+ [/^(.+) \(copia\)$/,"$1 (copy)"],
+ [/^Copiando la sede actual \((.+)\)$/,"Copying the current site ($1)"],
+ [/^caduca el (.+)$/,"expires on $1"],
+ [/^caducada el (.+)$/,"expired on $1"],
+ [/^asignada a (.+)$/,"assigned to $1"],
+ [/^Sede (\d+)$/,"Site $1"],
+ [/^Tendrás 30 segundos para deshacerlo\.$/,"You'll have 30 seconds to undo it."],
+ [/^(\d+(?:[.,]\d+)?) (\D.*)$/,(m,n,w)=>{const t=T(w);return t===w?m:n+" "+t;}]
+];
+  const SKIP=new Set(["SCRIPT","STYLE","TEXTAREA","INPUT","CODE"]);
+  function core(s){
+    let r=D.get(s);if(r!=null)return r;
+    for(const [re,f] of P){const m=re.exec(s);if(m){const x=typeof f==="function"?f(...m):s.replace(re,f);if(x!==s)return x;}}
+    // frases hechas de piezas: "Servidor · En producción", "CPD › RACK A › U12"
+    for(const sep of [" · "," › "," / "]){
+      if(!s.includes(sep))continue;
+      let any=false;const parts=s.split(sep).map(p=>{const t=p.trim()?core(p.trim()):null;if(t!=null){any=true;return t;}return p;});
+      if(any)return parts.join(sep);
+    }
+    return null;
+  }
+  function tr(s){
+    if(lang==="es"||s==null)return s;
+    s=String(s);const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);
+    if(!m[2]||!/[A-Za-zÁÉÍÓÚáéíóúÑñ¿¡]/.test(m[2]))return s;
+    if(m[2].includes("\n"))return m[1]+m[2].split("\n").map(tr).join("\n")+m[3];   // avisos de varias lineas
+    const r=core(m[2]);return r==null?s:m[1]+r+m[3];
+  }
+  const ATTR=["title","placeholder","aria-label"];
+  function doEl(el){
+    if(el.closest&&el.closest("[data-notr]"))return;
+    ATTR.forEach(a=>{const v=el.getAttribute&&el.getAttribute(a);if(v){const t=tr(v);if(t!==v)el.setAttribute(a,t);}});
+    if(el.tagName==="INPUT"&&(el.type==="button"||el.type==="submit")&&el.value){const t=tr(el.value);if(t!==el.value)el.value=t;}
+  }
+  function doText(n){
+    const p=n.parentNode;if(!p||SKIP.has(p.nodeName)||(p.closest&&p.closest("[data-notr]")))return;
+    const v=n.nodeValue,t=tr(v);if(t!==v)n.nodeValue=t;
+  }
+  function walk(root){
+    if(lang==="es"||!root)return;
+    if(root.nodeType===3){doText(root);return;}
+    if(root.nodeType!==1&&root.nodeType!==9&&root.nodeType!==11)return;
+    if(root.nodeType===1){if(root.nodeName==="SCRIPT"||root.nodeName==="STYLE")return;doEl(root);}
+    const w=document.createTreeWalker(root,5,null);let n;   // 5 = elementos y textos
+    while((n=w.nextNode())){if(n.nodeType===3)doText(n);else doEl(n);}   // los campos tambien: su placeholder
+  }
+  let mo=null;
+  function start(){
+    if(lang==="es"||mo)return;
+    document.documentElement.lang="en";
+    walk(document.body);document.title=tr(document.title);
+    mo=new MutationObserver(list=>{for(const r of list){
+      if(r.type==="childList")r.addedNodes.forEach(walk);
+      else if(r.type==="characterData")doText(r.target);
+      else if(r.type==="attributes")doEl(r.target);}});
+    mo.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:ATTR});
+  }
+  // ventanas del navegador y textos que no pasan por la pagina
+  const _c=window.confirm.bind(window),_a=window.alert.bind(window),_p=window.prompt.bind(window);
+  window.confirm=m=>_c(trLines(m));window.alert=m=>_a(trLines(m));window.prompt=(m,d)=>_p(trLines(m),d);
+  function trLines(m){return String(m==null?"":m).split("\n").map(tr).join("\n");}
+  // textos dibujados en las imagenes que se exportan (PNG)
+  if(lang!=="es"&&window.CanvasRenderingContext2D){
+    const C=CanvasRenderingContext2D.prototype,_f=C.fillText,_s=C.strokeText,_m=C.measureText;
+    C.fillText=function(t,...a){return _f.call(this,tr(t),...a);};
+    C.strokeText=function(t,...a){return _s.call(this,tr(t),...a);};
+    C.measureText=function(t){return _m.call(this,tr(t));};
+  }
+  // datos de ejemplo: en ingles para quien entra en ingles (solo los textos que estan en el diccionario)
+  function data(o){
+    if(lang==="es")return o;
+    if(typeof o==="string")return tr(o);
+    if(Array.isArray(o))return o.map(data);
+    if(o&&typeof o==="object"){Object.keys(o).forEach(k=>{if(!/^(id|type|st|tipo|estado|vlan|kind|mode|color)$/.test(k))o[k]=data(o[k]);});}
+    return o;
+  }
+  function setLang(l){try{localStorage.setItem(LK,l);}catch(e){}location.reload();}
+  // boton ES / EN
+  function button(where){
+    const b=document.createElement("button");b.className="btn sm";b.id="langBtn";b.setAttribute("data-notr","");
+    b.textContent=lang==="es"?"EN":"ES";b.title=lang==="es"?"English":"Español";
+    b.onclick=()=>setLang(lang==="es"?"en":"es");
+    if(where)where.parentNode.insertBefore(b,where);
+    return b;
+  }
+  return {get lang(){return lang;},tr,start,data,setLang,button};
+})();
+const T=I18N.tr;
+I18N.start();
+</script>
 <script>
 "use strict";
 const KEY="subnetscope.v1";
@@ -545,15 +1215,15 @@ function seed(){
   nV.dresv["192.168.30.15"]={mac:mac(15,160),name:"TEL-CONFERENCIAS",use:false};
   L(nU,"192.168.20.100",118,"PC-USUARIO-");L(nU,"192.168.21.0",40,"PORTATIL-");
   L(nV,"192.168.30.20",71,"TEL-");L(nI,"192.168.40.10",212,"INVITADO-",true);
-  return {zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[],nat,
-    dhcpInfo:{at:now,src:"dhcp-leases.csv (ejemplo)",fmt:"Windows Server (Export-Csv)"}};
+  return I18N.data({zoom:1,vlans:[vS,vU,vV,vI],subnets:[nS,nU,nV,nI],inventory:[],log:[],nat,
+    dhcpInfo:{at:now,src:"dhcp-leases.csv (ejemplo)",fmt:"Windows Server (Export-Csv)"}});
 }
 
 /* ---------- estado ---------- */
 let DB=null,S=null;
 const blankState=()=>({zoom:1,vlans:[],subnets:[],inventory:[],log:[],nat:[],dhcpInfo:null});
-function newSite(name,st){return {id:nid("s"),name:name||"Oficina de ejemplo",state:migrate(st||seed())};}
-function freshDB(){const r=newSite("Oficina de ejemplo");return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
+function newSite(name,st){return {id:nid("s"),name:name||T("Oficina de ejemplo"),state:migrate(st||seed())};}
+function freshDB(){const r=newSite(T("Oficina de ejemplo"));return {v:1,current:r.id,theme:"dark",expScope:"site",sites:[r]};}
 // todo lo que llega de un JSON (importado o vinculado) se valida: ids, colores, IPs y textos
 const safeId=(x,p)=>typeof x==="string"&&/^[\w-]{1,64}$/.test(x)?x:nid(p);
 const str=x=>x==null?"":String(x);
@@ -1942,7 +2612,7 @@ function expCSV(){
     if(s.v6)hostRows6(s).forEach(r=>rows.push([si.name,v?v.vid:"",v?v.name:"",s.v6,r.ip,r.est,r.name,r.type,r.mac,r.note]));
   }));
   const qq=v=>{let t=String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};   // evita formulas al abrirlo en Excel
-  const txt="\uFEFF"+[head,...rows].map(r=>r.map(qq).join(";")).join("\r\n");
+  const txt="\uFEFF"+[head.map(T),...rows].map(r=>r.map(qq).join(";")).join("\r\n");
   deliver(new Blob([txt],{type:"text/csv;charset=utf-8"}),"ips-"+scopeName()+"-"+stamp()+".csv","txt",txt);
 }
 const csvQ=v=>{let t=String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
@@ -1952,7 +2622,7 @@ function expNAT(){
     const n=ip2n(r.int),sb=si.state.subnets.find(s=>{const p=P(s);return n>=p.net&&n<=p.bc;}),h=sb&&sb.hosts[r.int];
     rows.push([si.name,r.ext||"WAN",r.extPort||"todos",PROTOS[r.proto],r.int,r.intPort||r.extPort||"todos",h?h.name:"",r.desc]);}));
   if(!rows.length){toast("No hay reglas NAT documentadas");return;}
-  const txt="\uFEFF"+[head,...rows].map(r=>r.map(csvQ).join(";")).join("\r\n");
+  const txt="\uFEFF"+[head.map(T),...rows].map(r=>r.map(csvQ).join(";")).join("\r\n");
   deliver(new Blob([txt],{type:"text/csv;charset=utf-8"}),"nat-"+scopeName()+"-"+stamp()+".csv","txt",txt);
 }
 function expJSON(){
@@ -2624,8 +3294,10 @@ document.addEventListener("click",ev=>{
 addEventListener("beforeunload",ev=>{if(!lsOK&&!fileHandle){ev.preventDefault();ev.returnValue="";}});
 
 /* ---------- versión y novedades ---------- */
-const VERSION="1.4";
+const VERSION="1.6";
 const NEWS=[
+ {v:"1.6",d:"16 de octubre de 2026",items:[
+   "Inglés: la aplicación sale en inglés si el navegador está en inglés, y con el botón EN / ES se cambia cuando quieras. Los datos que escribes no se tocan; los de ejemplo, sí."]},
  {v:"1.4",d:"14 de octubre de 2026",items:[
    "Deshacer y rehacer con Ctrl+Z / Ctrl+Y (o con ↶ ↷ en la barra).",
    "Zoom escribiendo el porcentaje.",
@@ -2673,6 +3345,7 @@ function checkNews(hadData){
 }
 let hadData=false;try{hadData=!!localStorage.getItem(KEY);}catch(e){}
 
+I18N.button($("#theme"));
 DB=load();
 S=site().state;
 setScope(DB.expScope);

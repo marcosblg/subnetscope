@@ -14,7 +14,9 @@ Y de **[AssetScope](https://github.com/marcosblg/assetscope)**, el inventario de
 
 ### 👉 [Pruébalo ahora en el navegador](https://marcosblg.github.io/subnetscope/)
 
-> 🆕 **v1.4** (14 de octubre de 2026): deshacer con Ctrl+Z. Viene de la v1.3: reservas del DHCP con su dueño aunque el equipo no esté encendido, y el pool leído del propio servidor. Con un `/export` de MikroTik sale todo de golpe. [Ver las novedades](CHANGELOG.md)
+🌐 **En español y en inglés**: sale en el idioma de tu navegador y se cambia con el botón **EN / ES**.
+
+> 🆕 **v1.6** (16 de octubre de 2026): ahora también en inglés. Viene de la v1.4: deshacer con Ctrl+Z. Viene de la v1.3: reservas del DHCP con su dueño aunque el equipo no esté encendido, y el pool leído del propio servidor. Con un `/export` de MikroTik sale todo de golpe. [Ver las novedades](CHANGELOG.md)
 
 No hay que instalar ni descargar nada: el enlace abre la herramienta con una oficina de ejemplo. Pulsa **▶ Ver demo** para la visita guiada.
 

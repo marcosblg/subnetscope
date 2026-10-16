@@ -14,7 +14,9 @@ And of **[AssetScope](https://github.com/marcosblg/assetscope)**, the family's i
 
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
-> 🆕 **v1.4** (October 14, 2026): undo with Ctrl+Z. On top of v1.3: DHCP reservations shown with their owner even when the device is off, and the pool read from the server itself. A MikroTik `/export` brings everything at once. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
+🌐 **In English and Spanish**: it opens in your browser's language and the **EN / ES** button switches it.
+
+> 🆕 **v1.6** (October 16, 2026): now in English too. On top of v1.4: undo with Ctrl+Z. On top of v1.3: DHCP reservations shown with their owner even when the device is off, and the pool read from the server itself. A MikroTik `/export` brings everything at once. [See the changelog](CHANGELOG.md#whats-new-in-subnetscope)
 
 Nothing to install or download: the link opens the tool with a sample office. Hit **▶ Ver demo** for the guided tour.
 

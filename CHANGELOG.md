@@ -2,6 +2,10 @@
 
 # Novedades de SubnetScope
 
+## v1.6 — 16 de octubre de 2026
+
+- **Inglés**: la aplicación sale en inglés si el navegador está en inglés, y con el botón EN / ES se cambia cuando quieras. Los datos que escribes no se tocan; los de ejemplo, sí.
+
 ## v1.5 — 15 de octubre de 2026
 
 - **Licencia**: pasa de MIT a AGPL-3.0. Las versiones anteriores siguen bajo MIT.
@@ -57,6 +61,10 @@ Primera versión pública.
 ---
 
 # What's new in SubnetScope
+
+## v1.6 — October 16, 2026
+
+- **English**: the app shows in English if your browser is in English, and the EN / ES button switches language whenever you like. Your own data is never touched; the sample data is translated.
 
 ## v1.5 — October 15, 2026
 
