@@ -12,6 +12,8 @@ It is the sister tool of **[RackScope](https://github.com/marcosblg/rackscope)**
 
 And of **[AssetScope](https://github.com/marcosblg/assetscope)**, the family's inventory tool: what each device is and when its warranty or support runs out. [Try it](https://marcosblg.github.io/assetscope/).
 
+And also of **[CertScope](https://github.com/marcosblg/certscope)**, for TLS certificates and domains: paste the PEM and it warns you before they expire. [Try it](https://marcosblg.github.io/certscope/).
+
 ### 👉 [Try it right now in your browser](https://marcosblg.github.io/subnetscope/)
 
 🌐 **In English and Spanish**: it opens in your browser's language and the **EN / ES** button switches it.
